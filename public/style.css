@@ -136,6 +136,13 @@ h1.section-title{font-family:'Space Grotesk', sans-serif; font-size:32px; font-w
 
 .dash-wrap{max-width:920px; margin:0 auto; padding:44px 32px 60px;}
 h1.dash-title{font-family:'Space Grotesk', sans-serif; font-size:26px; font-weight:700; margin-bottom:6px;}
+.sats-earned-card{
+  display:flex; align-items:center; gap:16px; background:var(--surface); border:1px solid var(--orange);
+  border-radius:var(--radius); padding:18px 22px; margin-bottom:28px; box-shadow:0 0 0 3px var(--orange-soft);
+}
+.sats-earned-icon{font-size:28px; flex-shrink:0;}
+.sats-earned-value{font-family:'Space Grotesk', sans-serif; font-size:20px; font-weight:700; color:var(--orange);}
+.sats-earned-sub{font-size:12.5px; color:var(--text-dim); margin-top:2px;}
 .dash-sub{font-size:13px; color:var(--text-dim); margin-bottom:28px;}
 
 .path-wrap{position:relative; padding:20px 0 60px; margin-bottom:20px;}

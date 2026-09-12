@@ -601,10 +601,20 @@ async function loadDashboard() {
 
   const totalSections = data.chapters.reduce((n, c) => n + c.sections.length, 0);
   const masteredSections = data.chapters.reduce((n, c) => n + c.sections.filter((s) => s.status === 'mastered').length, 0);
+  const SATS_PER_CHAPTER = 500;
+  const chaptersPassed = data.chapters.filter((c) => c.review_passed).length;
+  const satsEarned = chaptersPassed * SATS_PER_CHAPTER;
 
   el.innerHTML = `
     <h1 class="dash-title">${student.full_name}'s progress</h1>
     <p class="dash-sub">${masteredSections} of ${totalSections} sections mastered · ShalaKasi is building this path as you go, not following a fixed order.</p>
+    <div class="sats-earned-card">
+      <div class="sats-earned-icon">⚡</div>
+      <div>
+        <div class="sats-earned-value">${satsEarned.toLocaleString()} sats earned</div>
+        <div class="sats-earned-sub">${chaptersPassed} chapter${chaptersPassed === 1 ? '' : 's'} passed · 500 sats per chapter review</div>
+      </div>
+    </div>
     <div class="path-wrap" id="path-wrap">
       <svg class="path-svg" id="path-svg"></svg>
       ${data.chapters.map((ch, i) => {

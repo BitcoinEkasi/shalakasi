@@ -468,6 +468,56 @@ app.get('/api/admin/students/:id/chat', requireAdmin, async (req, res) => {
   res.json(data || []);
 });
 
+// Enrolment agreement — the signed liability waiver / media release /
+// POPIA consent, one record per student. Contains real personal
+// information (ID numbers, DOB, contact details), admin-only access.
+app.get('/api/admin/students/:id/enrolment', requireAdmin, async (req, res) => {
+  const { data, error } = await supabase
+    .from('enrolment_agreements')
+    .select('*')
+    .eq('student_id', req.params.id)
+    .maybeSingle();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data || null);
+});
+
+app.post('/api/admin/students/:id/enrolment', requireAdmin, async (req, res) => {
+  const {
+    signer_full_name, signer_id_number, signer_contact_number,
+    participant_full_name, participant_dob,
+    part_a_accepted, part_a_signature, part_a_date,
+    part_b_accepted, part_b_signature, part_b_date,
+  } = req.body;
+
+  if (!signer_full_name || !signer_id_number || !signer_contact_number) {
+    return res.status(400).json({ error: 'Signer full name, ID number, and contact number are required' });
+  }
+
+  const { data, error } = await supabase
+    .from('enrolment_agreements')
+    .upsert(
+      {
+        student_id: req.params.id,
+        signer_full_name, signer_id_number, signer_contact_number,
+        participant_full_name: participant_full_name || null,
+        participant_dob: participant_dob || null,
+        part_a_accepted: !!part_a_accepted,
+        part_a_signature: part_a_signature || null,
+        part_a_date: part_a_date || null,
+        part_b_accepted: !!part_b_accepted,
+        part_b_signature: part_b_signature || null,
+        part_b_date: part_b_date || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'student_id' }
+    )
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
 // The attendance register — defaults to today, or pass ?date=YYYY-MM-DD
 // for any other day. Returns every student who logged in that day.
 app.get('/api/admin/attendance', requireAdmin, async (req, res) => {

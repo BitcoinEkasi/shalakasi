@@ -239,24 +239,28 @@ async function openDetail(studentId, fullName, username) {
   document.getElementById('section-mastery').innerHTML = `<p class="empty-note">Loading…</p>`;
   document.getElementById('section-decisions').innerHTML = `<p class="empty-note">Loading…</p>`;
   document.getElementById('section-chat').innerHTML = `<p class="empty-note">Loading…</p>`;
+  document.getElementById('section-enrolment').innerHTML = `<p class="empty-note">Loading…</p>`;
 
   if (!curriculumCache) {
     const cRes = await fetch('/api/admin/curriculum', { headers: adminHeaders() });
     curriculumCache = await cRes.json();
   }
 
-  const [progressRes, decisionsRes, chatRes] = await Promise.all([
+  const [progressRes, decisionsRes, chatRes, enrolmentRes] = await Promise.all([
     fetch(`/api/admin/students/${studentId}/progress`, { headers: adminHeaders() }),
     fetch(`/api/admin/students/${studentId}/decisions`, { headers: adminHeaders() }),
     fetch(`/api/admin/students/${studentId}/chat`, { headers: adminHeaders() }),
+    fetch(`/api/admin/students/${studentId}/enrolment`, { headers: adminHeaders() }),
   ]);
   const progress = await progressRes.json();
   const decisions = await decisionsRes.json();
   const chat = await chatRes.json();
+  const enrolment = await enrolmentRes.json();
 
   renderMastery(progress);
   renderDecisions(decisions);
   renderChat(chat);
+  renderEnrolment(enrolment);
 }
 
 function renderMastery(progress) {
@@ -303,6 +307,104 @@ function renderChat(chat) {
       <div class="who">${c.role}${c.sections ? `<span class="section-tag">${c.sections.number} ${escapeHtml(c.sections.title)}</span>` : ''}</div>
       <div class="body">${escapeHtml(c.message)}</div>
     </div>`).join('');
+}
+
+function renderEnrolment(existing) {
+  const el = document.getElementById('section-enrolment');
+  const v = existing || {};
+
+  el.innerHTML = `
+    <div class="enrolment-doc">
+      <h3>Bitcoin Ekasi Enrolment Agreement</h3>
+      <p class="enrolment-doc-sub">Liability Waiver, Assumption of Risk, Indemnity, Media Release and Personal Information Consent — Bitcoin Diploma &amp; Postgraduate Programme</p>
+
+      <h4>Part A — Release of Liability, Waiver of Claims, Assumption of Risk and Indemnity</h4>
+      <p>I acknowledge that BITCOIN EKASI (136-987 NPO), its trustees, coordinators, employees, agents and representatives are not responsible for any injury, illness, death, loss or damage of any nature whatsoever sustained arising from participation in the Bitcoin Diploma Programme, the Postgraduate Programme, and all related activities, except to the extent that such loss or damage is caused by gross negligence, recklessness, or wilful misconduct.</p>
+      <p>Risks include: travel to/from the centre, transport, use of classroom facilities/computers/devices, digital asset risks (sending, receiving, or holding Bitcoin and Lightning transactions, price volatility, irreversible transactions, and the participant's own responsibility for wallet and key security), and general activity risks such as falls or minor injury.</p>
+      <p>I voluntarily accept and assume all such risks. I waive any claims against BITCOIN EKASI arising from participation, release BITCOIN EKASI from liability (except where caused by gross negligence, recklessness, or wilful misconduct), and indemnify BITCOIN EKASI against claims from third parties arising from the participant's participation.</p>
+      <p>The programme is offered subject to available funding, sponsorship, equipment, and venue conditions, and may be postponed, altered, or discontinued at BITCOIN EKASI's discretion. Enrolment is not guaranteed. BITCOIN EKASI may expel a participant for breach of its code of conduct or this agreement, or for persistent unexplained absence (for minors, school education is encouraged first). Any sats, rewards, or incentives earned (including attendance-linked Lightning payouts) are provided at BITCOIN EKASI's sole discretion, create no entitlement to future rewards, and may be forfeited if the participant withdraws or is expelled.</p>
+
+      <h4>Part B — Condition of Participation, Media Release and Personal Information (POPIA)</h4>
+      <p><b>Acceptance of Part B is a condition of enrolment</b> — as a free, voluntary, non-compulsory programme, BITCOIN EKASI requires consent to photograph, film, or record participants for promotional, social media, fundraising, and educational purposes. This is not separable from participation. Withdrawing this consent later means withdrawing from the programme (does not affect material already published).</p>
+      <p>Under POPIA section 35(1)(a), consent is given for BITCOIN EKASI to collect and process personal information including names/contact details, emergency/safety information, photographs/video, identity documentation (where required), and Lightning wallet/address details (for attendance-linked reward payouts), for programme administration, safety, communication, reward payouts, and media use. Information will only be accessed by authorised persons and won't be sold or shared for unrelated commercial purposes, though it may be disclosed where required by law or in an emergency.</p>
+      <p>The signer has the right to request access to, correction of, or deletion of personal information held, subject to BITCOIN EKASI's right to retain records where required by law or to establish/exercise/defend a legal claim. Governed by the laws of the Republic of South Africa. Responsible party: BITCOIN EKASI (136-987 NPO), hermann@bitcoinekasi.com.</p>
+    </div>
+
+    <div class="enrolment-form">
+      <h4>Signer details</h4>
+      <p class="page-sub" style="margin-bottom:14px;">Signing as the participant (18+) or as parent/legal guardian of a minor participant.</p>
+      <div class="add-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="field"><label>Full name (signer)</label><input type="text" id="enr-signer-name" value="${escapeHtml(v.signer_full_name)}"></div>
+        <div class="field"><label>ID number (signer)</label><input type="text" id="enr-signer-id" value="${escapeHtml(v.signer_id_number)}"></div>
+        <div class="field"><label>Contact number (signer)</label><input type="text" id="enr-signer-contact" value="${escapeHtml(v.signer_contact_number)}"></div>
+        <div class="field"><label>Participant's full name (if different)</label><input type="text" id="enr-participant-name" value="${escapeHtml(v.participant_full_name)}"></div>
+        <div class="field"><label>Participant's date of birth (if minor)</label><input type="date" id="enr-participant-dob" value="${v.participant_dob || ''}"></div>
+      </div>
+
+      <div class="enrolment-sign-block">
+        <label class="enrolment-checkbox"><input type="checkbox" id="enr-part-a-accepted" ${v.part_a_accepted ? 'checked' : ''}> I have read, understood, and accept the terms of <b>Part A</b> (liability waiver, indemnity, assumption of risk).</label>
+        <div class="add-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="field"><label>Signature (typed full name) — Part A</label><input type="text" id="enr-sig-a" value="${escapeHtml(v.part_a_signature)}"></div>
+          <div class="field"><label>Date — Part A</label><input type="date" id="enr-date-a" value="${v.part_a_date || ''}"></div>
+        </div>
+      </div>
+
+      <div class="enrolment-sign-block">
+        <label class="enrolment-checkbox"><input type="checkbox" id="enr-part-b-accepted" ${v.part_b_accepted ? 'checked' : ''}> I have read, understood, and accept the terms of <b>Part B</b> (media release and POPIA personal information consent) as a condition of enrolment.</label>
+        <div class="add-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="field"><label>Signature (typed full name) — Part B</label><input type="text" id="enr-sig-b" value="${escapeHtml(v.part_b_signature)}"></div>
+          <div class="field"><label>Date — Part B</label><input type="date" id="enr-date-b" value="${v.part_b_date || ''}"></div>
+        </div>
+      </div>
+
+      <button class="add-btn" id="enr-save-btn" style="margin-top:16px;">Save enrolment agreement</button>
+      <div class="add-status" id="enr-status"></div>
+      ${v.updated_at ? `<p class="enrolment-saved-note">Last saved: ${new Date(v.updated_at).toLocaleString()}</p>` : ''}
+    </div>
+  `;
+
+  document.getElementById('enr-save-btn').addEventListener('click', saveEnrolment);
+}
+
+async function saveEnrolment() {
+  const statusEl = document.getElementById('enr-status');
+  statusEl.className = 'add-status';
+  statusEl.textContent = '';
+
+  const payload = {
+    signer_full_name: document.getElementById('enr-signer-name').value.trim(),
+    signer_id_number: document.getElementById('enr-signer-id').value.trim(),
+    signer_contact_number: document.getElementById('enr-signer-contact').value.trim(),
+    participant_full_name: document.getElementById('enr-participant-name').value.trim(),
+    participant_dob: document.getElementById('enr-participant-dob').value,
+    part_a_accepted: document.getElementById('enr-part-a-accepted').checked,
+    part_a_signature: document.getElementById('enr-sig-a').value.trim(),
+    part_a_date: document.getElementById('enr-date-a').value,
+    part_b_accepted: document.getElementById('enr-part-b-accepted').checked,
+    part_b_signature: document.getElementById('enr-sig-b').value.trim(),
+    part_b_date: document.getElementById('enr-date-b').value,
+  };
+
+  if (!payload.signer_full_name || !payload.signer_id_number || !payload.signer_contact_number) {
+    statusEl.className = 'add-status err';
+    statusEl.textContent = 'Signer full name, ID number, and contact number are required.';
+    return;
+  }
+
+  const res = await fetch(`/api/admin/students/${currentDetailStudentId}/enrolment`, {
+    method: 'POST', headers: adminHeaders(), body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    statusEl.className = 'add-status err';
+    statusEl.textContent = data.error || 'Could not save enrolment agreement.';
+    return;
+  }
+
+  statusEl.className = 'add-status ok';
+  statusEl.textContent = 'Enrolment agreement saved.';
+  renderEnrolment(data);
 }
 
 // ---------- BOOT ----------

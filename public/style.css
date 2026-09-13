@@ -159,7 +159,10 @@ h1.section-title{font-family:'Space Grotesk', sans-serif; font-size:42px; font-w
 }
 .book-chapter-eyebrow{font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--orange); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px;}
 .book-chapter-title{font-family:'Space Grotesk', sans-serif; font-size:26px; font-weight:700;}
-.book-section{margin-bottom:28px;}
+.book-section{
+  margin-bottom:28px; padding:24px 26px; background:var(--surface); border:1.5px solid var(--orange);
+  clip-path:polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+}
 .book-section-title{font-family:'Space Grotesk', sans-serif; font-size:17px; font-weight:600; margin-bottom:8px; display:flex; align-items:baseline; gap:8px;}
 .book-section-title .num{color:var(--orange); font-family:'JetBrains Mono', monospace; font-size:14px;}
 .book-activity{font-size:11.5px; color:var(--amber); font-style:italic; margin-bottom:10px;}

@@ -18,7 +18,7 @@ body{background:var(--bg); color:var(--text); font-family:'Inter', sans-serif; -
 }
 .login-card{width:380px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:36px;}
 .login-logo{width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, var(--orange), var(--dusk)); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:17px; color:#0B0D10; margin-bottom:20px;}
-.login-card h1{font-family:'Space Grotesk', sans-serif; font-size:22px; margin-bottom:6px;}
+.login-card h1{font-family:'Space Grotesk', sans-serif; font-size:42px; font-weight:700; margin-bottom:6px;}
 .login-card p.sub{font-size:13px; color:var(--text-dim); margin-bottom:26px;}
 .field{margin-bottom:14px;}
 .field label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px;}
@@ -63,7 +63,7 @@ body{background:var(--bg); color:var(--text); font-family:'Inter', sans-serif; -
 .course-wrap{max-width:760px; margin:0 auto; padding:48px 32px 120px;}
 .crumb{font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; margin-bottom:14px;}
 .crumb span{color:var(--orange);}
-h1.section-title{font-family:'Space Grotesk', sans-serif; font-size:32px; font-weight:700; line-height:1.15; margin-bottom:22px;}
+h1.section-title{font-family:'Space Grotesk', sans-serif; font-size:42px; font-weight:700; line-height:1.15; margin-bottom:22px;}
 .review-note{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px; font-size:14px; line-height:1.6; color:var(--text-dim);}
 .satoshi-intro p{font-size:14px; line-height:1.6; color:var(--text-dim); padding-top:2px;}
 .body-text{font-size:16px; line-height:1.8; color:#D5D2CB; margin-bottom:18px; white-space:pre-line;}
@@ -135,7 +135,7 @@ h1.section-title{font-family:'Space Grotesk', sans-serif; font-size:32px; font-w
 .book-toc a:hover{color:var(--orange);}
 
 .dash-wrap{max-width:920px; margin:0 auto; padding:44px 32px 60px;}
-h1.dash-title{font-family:'Space Grotesk', sans-serif; font-size:26px; font-weight:700; margin-bottom:6px;}
+h1.dash-title{font-family:'Space Grotesk', sans-serif; font-size:42px; font-weight:700; margin-bottom:6px;}
 .sats-earned-card{
   display:flex; align-items:center; gap:16px; background:var(--surface); border:1px solid var(--orange);
   border-radius:var(--radius); padding:18px 22px; margin-bottom:28px; box-shadow:0 0 0 3px var(--orange-soft);

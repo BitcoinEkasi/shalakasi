@@ -309,6 +309,82 @@ function renderChat(chat) {
     </div>`).join('');
 }
 
+// Sets up drawing on a signature canvas — mouse and touch both work,
+// since this may be used on a touchscreen workstation or tablet during
+// in-person enrolment. Loads an existing saved signature image if one
+// was already captured for this student.
+function setupSignaturePad(canvasId, clearBtnId, existingImage) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#1D2128';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#F2F0EB';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (existingImage) {
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    img.src = existingImage;
+  }
+
+  let drawing = false;
+  let last = null;
+
+  function pos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const point = e.touches ? e.touches[0] : e;
+    return {
+      x: (point.clientX - rect.left) * (canvas.width / rect.width),
+      y: (point.clientY - rect.top) * (canvas.height / rect.height),
+    };
+  }
+
+  function start(e) {
+    e.preventDefault();
+    drawing = true;
+    last = pos(e);
+  }
+  function move(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const p = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    last = p;
+  }
+  function end() { drawing = false; }
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', end);
+
+  document.getElementById(clearBtnId).addEventListener('click', () => {
+    ctx.fillStyle = '#1D2128';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  });
+}
+
+// A freshly-cleared canvas is just the solid background fill — compare
+// against a blank reference to know whether to save null instead of
+// submitting an "empty" signature image.
+function isCanvasBlank(canvas) {
+  const ctx = canvas.getContext('2d');
+  const blank = document.createElement('canvas');
+  blank.width = canvas.width; blank.height = canvas.height;
+  const blankCtx = blank.getContext('2d');
+  blankCtx.fillStyle = '#1D2128';
+  blankCtx.fillRect(0, 0, canvas.width, canvas.height);
+  return ctx.getImageData(0, 0, canvas.width, canvas.height).data.toString()
+    === blankCtx.getImageData(0, 0, canvas.width, canvas.height).data.toString();
+}
+
 function renderEnrolment(existing) {
   const el = document.getElementById('section-enrolment');
   const v = existing || {};
@@ -343,18 +419,24 @@ function renderEnrolment(existing) {
 
       <div class="enrolment-sign-block">
         <label class="enrolment-checkbox"><input type="checkbox" id="enr-part-a-accepted" ${v.part_a_accepted ? 'checked' : ''}> I have read, understood, and accept the terms of <b>Part A</b> (liability waiver, indemnity, assumption of risk).</label>
-        <div class="add-grid" style="grid-template-columns:1fr 1fr;">
-          <div class="field"><label>Signature (typed full name) — Part A</label><input type="text" id="enr-sig-a" value="${escapeHtml(v.part_a_signature)}"></div>
-          <div class="field"><label>Date — Part A</label><input type="date" id="enr-date-a" value="${v.part_a_date || ''}"></div>
+        <div class="field"><label>Printed name — Part A</label><input type="text" id="enr-sig-a" value="${escapeHtml(v.part_a_signature)}"></div>
+        <label class="sig-pad-label">Signature — Part A</label>
+        <div class="sig-pad-wrap">
+          <canvas class="sig-pad" id="enr-canvas-a" width="460" height="140"></canvas>
+          <button type="button" class="sig-clear-btn" id="enr-clear-a">Clear</button>
         </div>
+        <div class="field" style="margin-top:10px;"><label>Date — Part A</label><input type="date" id="enr-date-a" value="${v.part_a_date || ''}"></div>
       </div>
 
       <div class="enrolment-sign-block">
         <label class="enrolment-checkbox"><input type="checkbox" id="enr-part-b-accepted" ${v.part_b_accepted ? 'checked' : ''}> I have read, understood, and accept the terms of <b>Part B</b> (media release and POPIA personal information consent) as a condition of enrolment.</label>
-        <div class="add-grid" style="grid-template-columns:1fr 1fr;">
-          <div class="field"><label>Signature (typed full name) — Part B</label><input type="text" id="enr-sig-b" value="${escapeHtml(v.part_b_signature)}"></div>
-          <div class="field"><label>Date — Part B</label><input type="date" id="enr-date-b" value="${v.part_b_date || ''}"></div>
+        <div class="field"><label>Printed name — Part B</label><input type="text" id="enr-sig-b" value="${escapeHtml(v.part_b_signature)}"></div>
+        <label class="sig-pad-label">Signature — Part B</label>
+        <div class="sig-pad-wrap">
+          <canvas class="sig-pad" id="enr-canvas-b" width="460" height="140"></canvas>
+          <button type="button" class="sig-clear-btn" id="enr-clear-b">Clear</button>
         </div>
+        <div class="field" style="margin-top:10px;"><label>Date — Part B</label><input type="date" id="enr-date-b" value="${v.part_b_date || ''}"></div>
       </div>
 
       <button class="add-btn" id="enr-save-btn" style="margin-top:16px;">Save enrolment agreement</button>
@@ -362,6 +444,9 @@ function renderEnrolment(existing) {
       ${v.updated_at ? `<p class="enrolment-saved-note">Last saved: ${new Date(v.updated_at).toLocaleString()}</p>` : ''}
     </div>
   `;
+
+  setupSignaturePad('enr-canvas-a', 'enr-clear-a', v.part_a_signature_image);
+  setupSignaturePad('enr-canvas-b', 'enr-clear-b', v.part_b_signature_image);
 
   document.getElementById('enr-save-btn').addEventListener('click', saveEnrolment);
 }
@@ -371,6 +456,9 @@ async function saveEnrolment() {
   statusEl.className = 'add-status';
   statusEl.textContent = '';
 
+  const canvasA = document.getElementById('enr-canvas-a');
+  const canvasB = document.getElementById('enr-canvas-b');
+
   const payload = {
     signer_full_name: document.getElementById('enr-signer-name').value.trim(),
     signer_id_number: document.getElementById('enr-signer-id').value.trim(),
@@ -379,9 +467,11 @@ async function saveEnrolment() {
     participant_dob: document.getElementById('enr-participant-dob').value,
     part_a_accepted: document.getElementById('enr-part-a-accepted').checked,
     part_a_signature: document.getElementById('enr-sig-a').value.trim(),
+    part_a_signature_image: isCanvasBlank(canvasA) ? null : canvasA.toDataURL('image/png'),
     part_a_date: document.getElementById('enr-date-a').value,
     part_b_accepted: document.getElementById('enr-part-b-accepted').checked,
     part_b_signature: document.getElementById('enr-sig-b').value.trim(),
+    part_b_signature_image: isCanvasBlank(canvasB) ? null : canvasB.toDataURL('image/png'),
     part_b_date: document.getElementById('enr-date-b').value,
   };
 

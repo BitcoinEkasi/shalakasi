@@ -15,7 +15,7 @@ const { decideNextStep } = require('./services/aiEngine');
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 // API responses must never be cached — a stale cached /api/curriculum
 // response (e.g. showing an old review_passed:false) is exactly the
@@ -485,8 +485,8 @@ app.post('/api/admin/students/:id/enrolment', requireAdmin, async (req, res) => 
   const {
     signer_full_name, signer_id_number, signer_contact_number,
     participant_full_name, participant_dob,
-    part_a_accepted, part_a_signature, part_a_date,
-    part_b_accepted, part_b_signature, part_b_date,
+    part_a_accepted, part_a_signature, part_a_signature_image, part_a_date,
+    part_b_accepted, part_b_signature, part_b_signature_image, part_b_date,
   } = req.body;
 
   if (!signer_full_name || !signer_id_number || !signer_contact_number) {
@@ -503,9 +503,11 @@ app.post('/api/admin/students/:id/enrolment', requireAdmin, async (req, res) => 
         participant_dob: participant_dob || null,
         part_a_accepted: !!part_a_accepted,
         part_a_signature: part_a_signature || null,
+        part_a_signature_image: part_a_signature_image || null,
         part_a_date: part_a_date || null,
         part_b_accepted: !!part_b_accepted,
         part_b_signature: part_b_signature || null,
+        part_b_signature_image: part_b_signature_image || null,
         part_b_date: part_b_date || null,
         updated_at: new Date().toISOString(),
       },

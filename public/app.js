@@ -613,16 +613,45 @@ function renderBook(data) {
 // ---------- DASHBOARD ----------
 // ---------- LIVE BITCOIN NETWORK (full-screen demo dashboard) ----------
 let liveNetworkInterval = null;
+let halvingTickInterval = null;
+let halvingTargetMs = null; // estimated timestamp of the next halving, recalculated each data refresh
+
+const BLOCKS_PER_HALVING = 210_000;
+const AVG_SECONDS_PER_BLOCK = 600; // Bitcoin's ~10 minute target block time
 
 function startLiveNetworkDashboard() {
   fetchLiveNetworkData();
   stopLiveNetworkDashboard();
   liveNetworkInterval = setInterval(fetchLiveNetworkData, 15_000);
+  halvingTickInterval = setInterval(tickHalvingCountdown, 1000);
 }
 
 function stopLiveNetworkDashboard() {
   if (liveNetworkInterval) clearInterval(liveNetworkInterval);
+  if (halvingTickInterval) clearInterval(halvingTickInterval);
   liveNetworkInterval = null;
+  halvingTickInterval = null;
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return { d: 0, h: 0, m: 0, s: 0 };
+  const totalSeconds = Math.floor(ms / 1000);
+  return {
+    d: Math.floor(totalSeconds / 86400),
+    h: Math.floor((totalSeconds % 86400) / 3600),
+    m: Math.floor((totalSeconds % 3600) / 60),
+    s: totalSeconds % 60,
+  };
+}
+
+// Ticks the countdown display every second between the 15s data refreshes,
+// so it visibly counts down rather than jumping every 15 seconds.
+function tickHalvingCountdown() {
+  if (!halvingTargetMs) return;
+  const el = document.getElementById('halving-countdown-value');
+  if (!el) return;
+  const { d, h, m, s } = formatCountdown(halvingTargetMs - Date.now());
+  el.textContent = `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
 }
 
 async function fetchLiveNetworkData() {
@@ -648,6 +677,17 @@ async function fetchLiveNetworkData() {
     const changeClass = change >= 0 ? 'up' : 'down';
     const changeSign = change >= 0 ? '+' : '';
 
+    // Halving happens at every multiple of 210,000 blocks — estimate the
+    // next one from the real current height and Bitcoin's ~10 min target
+    // block time. This is a real calculation from real live data, not a
+    // fixed date — it'll drift slightly as actual mining speed varies,
+    // same as every other halving estimate you'll see anywhere.
+    const currentHeight = Number(height);
+    const nextHalvingBlock = Math.ceil((currentHeight + 1) / BLOCKS_PER_HALVING) * BLOCKS_PER_HALVING;
+    const blocksRemaining = nextHalvingBlock - currentHeight;
+    halvingTargetMs = Date.now() + blocksRemaining * AVG_SECONDS_PER_BLOCK * 1000;
+    const initialCountdown = formatCountdown(halvingTargetMs - Date.now());
+
     el.innerHTML = `
       <div class="live-header">
         <div class="live-header-badge"><span class="live-dot"></span> LIVE</div>
@@ -663,6 +703,12 @@ async function fetchLiveNetworkData() {
             <span class="price-change ${changeClass}">${changeSign}${change?.toFixed(2)}% (24h)</span>
             &nbsp;·&nbsp; $${Math.round(usdPrice).toLocaleString('en-US')} USD
           </div>
+        </div>
+
+        <div class="live-card halving-card live-card-wide">
+          <div class="live-card-label">⚡ Next Bitcoin halving — estimated</div>
+          <div class="live-card-value halving-value" id="halving-countdown-value">${initialCountdown.d}d ${String(initialCountdown.h).padStart(2, '0')}h ${String(initialCountdown.m).padStart(2, '0')}m ${String(initialCountdown.s).padStart(2, '0')}s</div>
+          <div class="live-card-sub">Block ${nextHalvingBlock.toLocaleString()} · ${blocksRemaining.toLocaleString()} blocks away · mining reward cuts in half</div>
         </div>
 
         <div class="live-card">
@@ -684,7 +730,7 @@ async function fetchLiveNetworkData() {
         </div>
       </div>
 
-      <p class="live-footer">Source: CoinGecko &amp; mempool.space public APIs, fetched directly from this browser.</p>
+      <p class="live-footer">Source: CoinGecko &amp; mempool.space public APIs, fetched directly from this browser. Halving estimate calculated from real block height, not a fixed date.</p>
     `;
   } catch (err) {
     el.innerHTML = `

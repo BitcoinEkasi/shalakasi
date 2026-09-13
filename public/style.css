@@ -76,7 +76,11 @@ body{
 h1.section-title{font-family:'Space Grotesk', sans-serif; font-size:42px; font-weight:700; line-height:1.15; margin-bottom:22px;}
 .review-note{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px; font-size:14px; line-height:1.6; color:var(--text-dim);}
 .satoshi-intro p{font-size:14px; line-height:1.6; color:var(--text-dim); padding-top:2px;}
-.body-text{font-size:20px; line-height:1.7; color:#D5D2CB; margin-bottom:18px; white-space:pre-line;}
+.body-text{
+  font-size:20px; line-height:1.7; color:#D5D2CB; margin-bottom:18px; white-space:pre-line;
+  padding:24px 26px; background:var(--surface); border:1.5px solid var(--orange);
+  clip-path:polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+}
 .activity-badge{display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--amber); background:rgba(251,191,36,0.12); padding:6px 12px; border-radius:20px; margin-bottom:20px;}
 .btc-bullet{color:var(--orange); font-weight:700; font-family:'Space Grotesk', sans-serif; margin-right:2px;}
 

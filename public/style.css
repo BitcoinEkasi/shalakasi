@@ -10,12 +10,18 @@ html,body{height:100%;}
 body{background:var(--bg); color:var(--text); font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased;}
 
 .login-screen{
-  height:100vh; display:flex; align-items:center; justify-content:center;
+  height:100vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
   background:
     radial-gradient(circle at 30% 20%, #1a1410 0%, #0B0D10 60%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%23F7931A' stroke-width='1.2' opacity='0.09'%3E%3Cpath d='M0 40 H70 V90 H160 V40 H240'/%3E%3Cpath d='M0 130 H50 V170 H120 V220 H240'/%3E%3Cpath d='M180 0 V60 H240'/%3E%3Cpath d='M20 240 V190 H90 V150'/%3E%3Ccircle cx='70' cy='40' r='4'/%3E%3Ccircle cx='160' cy='90' r='4'/%3E%3Ccircle cx='50' cy='130' r='4'/%3E%3Ccircle cx='120' cy='170' r='4'/%3E%3Ccircle cx='180' cy='60' r='4'/%3E%3Ccircle cx='90' cy='190' r='4'/%3E%3C/g%3E%3C/svg%3E");
   background-repeat: repeat;
 }
+.login-screen::before{
+  content:'₿'; position:absolute; font-family:'Space Grotesk', sans-serif; font-weight:700;
+  font-size:min(70vw, 900px); color:var(--orange); opacity:0.035; z-index:0;
+  top:50%; left:50%; transform:translate(-50%, -50%); pointer-events:none; line-height:1;
+}
+.login-card{position:relative; z-index:1;}
 .login-card{width:380px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:36px;}
 .login-logo{width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, var(--orange), var(--dusk)); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:17px; color:#0B0D10; margin-bottom:20px;}
 .login-card h1{font-family:'Space Grotesk', sans-serif; font-size:42px; font-weight:700; margin-bottom:6px;}
@@ -68,6 +74,7 @@ h1.section-title{font-family:'Space Grotesk', sans-serif; font-size:42px; font-w
 .satoshi-intro p{font-size:14px; line-height:1.6; color:var(--text-dim); padding-top:2px;}
 .body-text{font-size:20px; line-height:1.7; color:#D5D2CB; margin-bottom:18px; white-space:pre-line;}
 .activity-badge{display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--amber); background:rgba(251,191,36,0.12); padding:6px 12px; border-radius:20px; margin-bottom:20px;}
+.btc-bullet{color:var(--orange); font-weight:700; font-family:'Space Grotesk', sans-serif; margin-right:2px;}
 
 .checkpoint-card{margin-top:32px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px;}
 

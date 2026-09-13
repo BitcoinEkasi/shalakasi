@@ -15,6 +15,22 @@ function authHeaders() {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+// Turns lines starting with "— " (used throughout the lesson content
+// for lists) into a small styled ₿ bullet instead of a plain dash —
+// a subtle recurring Bitcoin mark rather than recoloring everything.
+function formatLessonText(text) {
+  return text
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('—')) {
+        return `<span class="btc-bullet">₿</span> ${trimmed.replace(/^—\s*/, '')}`;
+      }
+      return line;
+    })
+    .join('<br>');
+}
+
 // ---------- LOGIN ----------
 document.getElementById('login-submit').addEventListener('click', doLogin);
 document.getElementById('login-password').addEventListener('keydown', (e) => {
@@ -182,7 +198,7 @@ async function loadSection(sectionId, chapterNumber, chapterTitle) {
     <div class="crumb">Chapter ${ch} · ${chTitle} <span>· Section ${data.section.number}</span></div>
     <h1 class="section-title">${data.section.title}</h1>
     ${data.section.activity_title ? `<div class="activity-badge">✦ Activity: ${data.section.activity_title}</div>` : ''}
-    <div class="body-text">${(data.section.content_md || 'Content for this section is being written by your facilitator — check back soon.').replace(/\n/g, '<br>')}</div>
+    <div class="body-text">${formatLessonText(data.section.content_md || 'Content for this section is being written by your facilitator — check back soon.')}</div>
     <div id="live-widget-slot"></div>
     <div id="pp-widget-slot"></div>
     <div id="checkpoint-slot"></div>
@@ -580,7 +596,7 @@ function renderBook(data) {
         <div class="book-section">
           <div class="book-section-title"><span class="num">${s.number}</span> ${s.title}</div>
           ${s.activity_title ? `<div class="book-activity">✦ Activity: ${s.activity_title}</div>` : ''}
-          <div class="book-body">${s.content_md ? s.content_md.replace(/\n/g, '<br>') : '<i style="color:var(--text-faint)">Content for this section is still being written.</i>'}</div>
+          <div class="book-body">${s.content_md ? formatLessonText(s.content_md) : '<i style="color:var(--text-faint)">Content for this section is still being written.</i>'}</div>
         </div>
       `).join('')}
     </div>

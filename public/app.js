@@ -157,7 +157,7 @@ async function loadNextSection() {
     document.getElementById('course-content').innerHTML = `
       <div class="crumb">All chapters complete</div>
       <h1 class="section-title">You've finished the Bitcoin Diploma 🎉</h1>
-      <p class="body-text">Every section is mastered. Talk to Sassa about your certificate.</p>`;
+      <p class="body-text">Every section is mastered. Talk to your facilitator about your certificate.</p>`;
     return;
   }
 
@@ -181,7 +181,7 @@ async function loadSection(sectionId, chapterNumber, chapterTitle) {
     <div class="crumb">Chapter ${ch} · ${chTitle} <span>· Section ${data.section.number}</span></div>
     <h1 class="section-title">${data.section.title}</h1>
     ${data.section.activity_title ? `<div class="activity-badge">✦ Activity: ${data.section.activity_title}</div>` : ''}
-    <div class="body-text">${(data.section.content_md || 'Content for this section is being written by Sassa — check back soon.').replace(/\n/g, '<br>')}</div>
+    <div class="body-text">${(data.section.content_md || 'Content for this section is being written by your facilitator — check back soon.').replace(/\n/g, '<br>')}</div>
     <div id="live-widget-slot"></div>
     <div id="pp-widget-slot"></div>
     <div id="checkpoint-slot"></div>
@@ -326,9 +326,9 @@ async function submitReviewAnswer(quizId, selectedIndex) {
       if (completeData.reward?.status === 'paid') {
         rewardLine = `🎉 ${completeData.reward.amount_sats} sats sent to your wallet for finishing this chapter!`;
       } else if (completeData.reward?.status === 'no_match') {
-        rewardLine = `Chapter complete! Your sats reward is on hold — your wallet isn't linked yet. Check with Sassa to get that sorted.`;
+        rewardLine = `Chapter complete! Your sats reward is on hold — your wallet isn't linked yet. Check with your facilitator to get that sorted.`;
       } else if (completeData.reward?.status === 'failed') {
-        rewardLine = `Chapter complete! The sats reward hit a snag on our end — Sassa can sort that out manually.`;
+        rewardLine = `Chapter complete! The sats reward hit a snag on our end — Your facilitator can sort that out manually.`;
       }
 
       el.innerHTML = `
@@ -455,7 +455,7 @@ async function loadPurchasingPowerWidget(sectionNumber) {
 function renderCheckpoint() {
   const slot = document.getElementById('checkpoint-slot');
   if (!currentQuiz.length) {
-    slot.innerHTML = `<p class="no-quiz-note">No checkpoint questions yet for this section — Sassa is still writing this one. <button class="continue-btn" id="skip-continue">Continue anyway</button></p>`;
+    slot.innerHTML = `<p class="no-quiz-note">No checkpoint questions yet for this section — Your facilitator is still writing this one. <button class="continue-btn" id="skip-continue">Continue anyway</button></p>`;
     document.getElementById('skip-continue')?.addEventListener('click', async () => {
       await fetch(`/api/sections/${currentSectionId}/complete`, { method: 'POST', headers: authHeaders() });
       loadNextSection();

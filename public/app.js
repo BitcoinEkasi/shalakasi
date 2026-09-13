@@ -171,14 +171,63 @@ async function loadNextSection() {
   }
 
   if (!target) {
-    document.getElementById('course-content').innerHTML = `
-      <div class="crumb">All chapters complete</div>
-      <h1 class="section-title">You've finished the Bitcoin Diploma 🎉</h1>
-      <p class="body-text">Every section is mastered. Talk to your facilitator about your certificate.</p>`;
+    renderCertificate(data.chapters);
     return;
   }
 
   loadSection(target.id, target.chapterNumber, target.chapterTitle);
+}
+
+// A simple, deterministic-looking hex string for visual flavor on the
+// certificate — styled like a block hash, but purely cosmetic. Not an
+// actual blockchain anchor or cryptographic proof of anything; don't
+// present it to students as more than a nice design detail.
+function fakeCertHash(seed) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) { h = (h * 31 + seed.charCodeAt(i)) >>> 0; }
+  let hex = '';
+  for (let i = 0; i < 16; i++) {
+    h = (h * 1103515245 + 12345) >>> 0;
+    hex += (h % 16).toString(16);
+  }
+  return hex;
+}
+
+function renderCertificate(chapters) {
+  const totalChapters = chapters.length;
+  const chaptersPassed = chapters.filter((c) => c.review_passed).length;
+  const SATS_PER_CHAPTER = 500;
+  const satsEarned = chaptersPassed * SATS_PER_CHAPTER;
+  const today = new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+  const hash = fakeCertHash(`${student.username}-${student.id}-${today}`);
+
+  document.getElementById('course-content').innerHTML = `
+    <div class="crumb">All chapters complete</div>
+    <h1 class="section-title">You did it. 🎉</h1>
+
+    <div class="cert-wrap">
+      <div class="cert-card" id="cert-print-area">
+        <div class="cert-top-bar"></div>
+        <div class="cert-block-label">BLOCK — BITCOIN DIPLOMA GRADUATE</div>
+        <div class="cert-name">${escapeHtmlDash(student.full_name)}</div>
+        <div class="cert-sub">has completed the ShalaKasi Bitcoin Diploma</div>
+
+        <div class="cert-stats">
+          <div class="cert-stat"><div class="cert-stat-value">${chaptersPassed}/${totalChapters}</div><div class="cert-stat-label">Chapters mastered</div></div>
+          <div class="cert-stat"><div class="cert-stat-value">⚡ ${satsEarned.toLocaleString()}</div><div class="cert-stat-label">Sats earned</div></div>
+          <div class="cert-stat"><div class="cert-stat-value">${today}</div><div class="cert-stat-label">Completion date</div></div>
+        </div>
+
+        <div class="cert-hash">HASH · ${hash}</div>
+        <div class="cert-footer">Bitcoin Ekasi &amp; Surfer Kids · Mossel Bay, South Africa</div>
+      </div>
+
+      <button class="continue-btn" id="cert-print-btn">Print certificate</button>
+      <p class="cert-note">Talk to your facilitator about your official certificate and the Postgraduate track.</p>
+    </div>
+  `;
+
+  document.getElementById('cert-print-btn').addEventListener('click', () => window.print());
 }
 
 async function loadSection(sectionId, chapterNumber, chapterTitle) {

@@ -134,6 +134,28 @@ h1.section-title{font-family:'Space Grotesk', sans-serif; font-size:42px; font-w
 .book-toc a{display:block; font-size:13px; color:var(--text-dim); text-decoration:none; padding:4px 0;}
 .book-toc a:hover{color:var(--orange);}
 
+.live-wrap{max-width:980px; margin:0 auto; padding:56px 32px 60px;}
+.live-header{text-align:center; margin-bottom:44px;}
+.live-header-badge{
+  display:inline-flex; align-items:center; gap:8px; font-family:'JetBrains Mono', monospace; font-size:11px;
+  color:var(--mastered); background:var(--mastered-soft); padding:6px 16px; border-radius:20px; margin-bottom:18px;
+  letter-spacing:.1em;
+}
+.live-title{font-family:'Space Grotesk', sans-serif; font-size:44px; font-weight:700; margin-bottom:10px;}
+.live-sub{font-size:14px; color:var(--text-dim); max-width:520px; margin:0 auto;}
+.live-grid{display:grid; grid-template-columns:repeat(2, 1fr); gap:16px;}
+.live-card{background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:26px 28px; transition:border-color .2s ease;}
+.live-card:hover{border-color:var(--orange);}
+.live-card-wide{grid-column:1 / -1; background:linear-gradient(135deg, var(--surface), var(--surface-2)); border-color:var(--orange); box-shadow:0 0 30px rgba(247,147,26,0.12);}
+.live-card-label{font-family:'JetBrains Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin-bottom:10px;}
+.live-card-value{font-family:'Space Grotesk', sans-serif; font-size:40px; font-weight:700; color:var(--text); line-height:1.1;}
+.live-price{color:var(--orange); font-size:52px;}
+.live-card-sub{font-size:12.5px; color:var(--text-dim); margin-top:8px;}
+.live-mono{font-family:'JetBrains Mono', monospace;}
+.live-unit{font-size:16px; color:var(--text-faint); font-weight:500;}
+.live-footer{text-align:center; font-size:11.5px; color:var(--text-faint); font-style:italic; margin-top:32px;}
+@media (max-width: 640px){ .live-grid{grid-template-columns:1fr;} .live-title{font-size:32px;} .live-price{font-size:38px;} }
+
 .dash-wrap{max-width:920px; margin:0 auto; padding:44px 32px 60px;}
 h1.dash-title{font-family:'Space Grotesk', sans-serif; font-size:42px; font-weight:700; margin-bottom:6px;}
 .sats-earned-card{

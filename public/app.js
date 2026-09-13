@@ -120,11 +120,12 @@ function showView(name) {
   document.querySelectorAll('.rail-btn').forEach((b) => b.classList.remove('active'));
   document.querySelector(`.rail-btn[data-view="${name}"]`).classList.add('active');
 
-  const titles = { course: 'Course', book: '<b>The Book</b>', dashboard: '<b>Your Progress</b>' };
+  const titles = { course: 'Course', book: '<b>The Book</b>', dashboard: '<b>Your Progress</b>', live: '<b>Live Bitcoin Network</b>' };
   document.getElementById('topbar-title').innerHTML = titles[name];
 
   if (name === 'dashboard') loadDashboard();
   if (name === 'book') loadBook();
+  if (name === 'live') startLiveNetworkDashboard(); else stopLiveNetworkDashboard();
 }
 
 // ---------- COURSE ----------
@@ -594,6 +595,90 @@ function renderBook(data) {
 }
 
 // ---------- DASHBOARD ----------
+// ---------- LIVE BITCOIN NETWORK (full-screen demo dashboard) ----------
+let liveNetworkInterval = null;
+
+function startLiveNetworkDashboard() {
+  fetchLiveNetworkData();
+  stopLiveNetworkDashboard();
+  liveNetworkInterval = setInterval(fetchLiveNetworkData, 15_000);
+}
+
+function stopLiveNetworkDashboard() {
+  if (liveNetworkInterval) clearInterval(liveNetworkInterval);
+  liveNetworkInterval = null;
+}
+
+async function fetchLiveNetworkData() {
+  const el = document.getElementById('live-content');
+
+  try {
+    const [priceRes, heightRes, hashRes, mempoolRes, feesRes] = await Promise.all([
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=zar,usd&include_24hr_change=true'),
+      fetch('https://mempool.space/api/blocks/tip/height'),
+      fetch('https://mempool.space/api/blocks/tip/hash'),
+      fetch('https://mempool.space/api/mempool'),
+      fetch('https://mempool.space/api/v1/fees/recommended'),
+    ]);
+    const priceData = await priceRes.json();
+    const height = await heightRes.text();
+    const hash = await hashRes.text();
+    const mempoolData = await mempoolRes.json();
+    const fees = await feesRes.json();
+
+    const zarPrice = priceData?.bitcoin?.zar;
+    const usdPrice = priceData?.bitcoin?.usd;
+    const change = priceData?.bitcoin?.zar_24h_change;
+    const changeClass = change >= 0 ? 'up' : 'down';
+    const changeSign = change >= 0 ? '+' : '';
+
+    el.innerHTML = `
+      <div class="live-header">
+        <div class="live-header-badge"><span class="live-dot"></span> LIVE</div>
+        <h1 class="live-title">The Bitcoin Network</h1>
+        <p class="live-sub">Not a simulation, not a screenshot — this is happening right now, refreshing every 15 seconds.</p>
+      </div>
+
+      <div class="live-grid">
+        <div class="live-card live-card-wide">
+          <div class="live-card-label">BTC / ZAR</div>
+          <div class="live-card-value live-price">R${Math.round(zarPrice).toLocaleString('en-ZA')}</div>
+          <div class="live-card-sub">
+            <span class="price-change ${changeClass}">${changeSign}${change?.toFixed(2)}% (24h)</span>
+            &nbsp;·&nbsp; $${Math.round(usdPrice).toLocaleString('en-US')} USD
+          </div>
+        </div>
+
+        <div class="live-card">
+          <div class="live-card-label">Current block height</div>
+          <div class="live-card-value">${Number(height).toLocaleString()}</div>
+          <div class="live-card-sub live-mono">${hash.slice(0, 24)}…</div>
+        </div>
+
+        <div class="live-card">
+          <div class="live-card-label">Pending transactions</div>
+          <div class="live-card-value">${Number(mempoolData.count).toLocaleString()}</div>
+          <div class="live-card-sub">${(mempoolData.vsize / 1_000_000).toFixed(1)} MB waiting to confirm</div>
+        </div>
+
+        <div class="live-card">
+          <div class="live-card-label">Fee — next block</div>
+          <div class="live-card-value">${fees.fastestFee} <span class="live-unit">sat/vB</span></div>
+          <div class="live-card-sub">Economy: ${fees.economyFee} sat/vB</div>
+        </div>
+      </div>
+
+      <p class="live-footer">Source: CoinGecko &amp; mempool.space public APIs, fetched directly from this browser.</p>
+    `;
+  } catch (err) {
+    el.innerHTML = `
+      <div class="live-header">
+        <h1 class="live-title">The Bitcoin Network</h1>
+      </div>
+      <p class="body-text">Couldn't reach the live data sources right now — this needs an internet connection.</p>`;
+  }
+}
+
 async function loadDashboard() {
   const res = await fetch('/api/curriculum', { headers: authHeaders(), cache: 'no-store' });
   const data = await res.json();

@@ -44,6 +44,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="6" r="2.2"/><circle cx="12" cy="13" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="19" r="2.2"/><path d="M7.8 7.2 10.3 11.4M16.2 7.2 13.7 11.4M11 15 7.6 17.3M13 15l3.4 2.3"/></svg>
         <span>Progress</span>
       </button>
+      <button class="rail-btn" data-view="live">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 L12 8 M12 16 L12 22 M2 12 L8 12 M16 12 L22 12"/><circle cx="12" cy="12" r="3.5"/></svg>
+        <span>Live</span>
+      </button>
     </div>
     <div class="rail-logout" id="logout-btn" title="Log out">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
@@ -75,6 +79,12 @@
       <div class="dash-wrap" id="dashboard-content">
         <h1 class="dash-title">Your progress</h1>
         <p class="dash-sub">Loading…</p>
+      </div>
+    </div>
+
+    <div class="view" id="view-live">
+      <div class="live-wrap" id="live-content">
+        <p class="body-text">Connecting to the Bitcoin network…</p>
       </div>
     </div>
   </div>

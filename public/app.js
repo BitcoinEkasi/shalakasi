@@ -230,6 +230,37 @@ function renderCertificate(chapters) {
   document.getElementById('cert-print-btn').addEventListener('click', () => window.print());
 }
 
+// Sidebar listing every section in the current chapter, so a student
+// can jump back to anything they've already reached. Sections never
+// yet unlocked by the normal adaptive flow stay greyed out and
+// unclickable — this is a way to revisit, not a way to skip ahead.
+async function renderChapterNav(chapterNumber, activeSectionId) {
+  const nav = document.getElementById('chapter-nav');
+  const res = await fetch('/api/curriculum', { headers: authHeaders(), cache: 'no-store' });
+  if (res.status === 401) return forceLogout();
+  const data = await res.json();
+
+  const chapter = data.chapters.find((c) => c.number === chapterNumber);
+  if (!chapter) { nav.innerHTML = ''; return; }
+
+  nav.innerHTML = `
+    <div class="chapter-nav-title">Chapter ${chapter.number}</div>
+    <div class="chapter-nav-sub">${escapeHtmlDash(chapter.title)}</div>
+    ${chapter.sections.map((s) => {
+      const reached = s.status !== 'locked';
+      const isActive = s.id === activeSectionId;
+      return `<button class="chapter-nav-item ${s.status} ${isActive ? 'active' : ''}" ${reached ? `data-id="${s.id}"` : 'disabled'}>
+        <span class="chapter-nav-num">${s.number}</span>
+        <span class="chapter-nav-label">${escapeHtmlDash(s.title)}</span>
+      </button>`;
+    }).join('')}
+  `;
+
+  nav.querySelectorAll('.chapter-nav-item[data-id]').forEach((btn) => {
+    btn.addEventListener('click', () => loadSection(btn.dataset.id, chapter.number, chapter.title));
+  });
+}
+
 async function loadSection(sectionId, chapterNumber, chapterTitle) {
   currentSectionId = sectionId;
   quizIndex = 0;
@@ -255,6 +286,7 @@ async function loadSection(sectionId, chapterNumber, chapterTitle) {
 
   loadLiveBitcoinWidget(data.section.number);
   loadPurchasingPowerWidget(data.section.number);
+  renderChapterNav(ch, sectionId);
 
   renderCheckpoint();
 }

@@ -87,4 +87,4 @@ Pushes to `main` auto-deploy on Render. **Always check the Render dashboard for 
 
 ## Credits
 
-Built for **Bitcoin Ekasi & Surfer Kids** (NPO 136-987, PBO 930050797), Mossel Bay, South Africa.
+Built for **Bitcoin Ekasi Mossel Bay, South Africa.

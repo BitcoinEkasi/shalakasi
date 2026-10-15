@@ -1,4 +1,4 @@
-# Writing content for ShalaKasi — a guide for Sassa
+# Writing content for Stack & Study — a guide for Sassa
 
 Chapters 1-4 are done as a working example. This is the pattern to follow
 for Chapters 5-10. You don't need to touch any code — just fill in two

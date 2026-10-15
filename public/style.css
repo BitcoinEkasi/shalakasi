@@ -297,3 +297,31 @@ h1.dash-title{font-family:'Space Grotesk', sans-serif; font-size:42px; font-weig
 
 ::-webkit-scrollbar{width:8px;}
 ::-webkit-scrollbar-thumb{background:var(--surface-3); border-radius:4px;}
+
+/* ---- Postgrad library ---- */
+.pg-wrap{max-width:860px; margin:0 auto; padding:44px 32px 80px;}
+.pg-list{display:flex; flex-direction:column; gap:14px;}
+.pg-book{display:flex; justify-content:space-between; gap:20px; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px 22px;}
+.pg-book-main h3{font-family:'Space Grotesk',sans-serif; font-size:18px; margin-bottom:2px;}
+.pg-book-author{font-size:12px; color:var(--text-faint);}
+.pg-book-desc{font-size:13px; color:var(--text-dim); line-height:1.5; margin-top:8px;}
+.pg-book-side{display:flex; flex-direction:column; align-items:flex-end; gap:10px; flex-shrink:0;}
+.pg-book-side .continue-btn{margin-top:0;}
+.chip.book-chip{width:auto; height:auto; padding:5px 10px; font-size:10.5px; white-space:nowrap;}
+.chip.unread{background:var(--surface-3); color:var(--text-faint);}
+.chip.completed{background:var(--mastered-soft); color:var(--mastered);}
+.chip.failed{background:rgba(248,113,113,0.12); color:#f87171;}
+.pg-back{background:none; border:none; color:var(--text-dim); font-size:13px; cursor:pointer; margin-bottom:16px; padding:0;}
+.pg-back:hover{color:var(--orange);}
+.pdf-frame-wrap{border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--surface);}
+.pdf-frame{width:100%; height:72vh; border:0; display:block;}
+.pg-hint{font-size:12px; color:var(--text-faint); margin-top:10px;}
+.pg-hint a{color:var(--orange);}
+.pg-text{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px; font-size:17px; line-height:1.75; color:#D5D2CB; white-space:pre-wrap;}
+.pg-test-cta{margin-top:28px;}
+.pg-secondary{background:var(--surface-3); color:var(--text);}
+.pg-result{padding:16px 20px; border-radius:var(--radius); font-size:14px; line-height:1.6; margin-bottom:16px; border:1px solid var(--border);}
+.pg-result.completed{background:var(--mastered-soft); color:var(--mastered); border-color:var(--mastered);}
+.pg-result.failed{background:rgba(248,113,113,0.1); color:#f87171; border-color:#f87171;}
+.chip.book-chip::before{display:none !important;}
+@media (max-width:700px){ .pg-book{flex-direction:column; align-items:flex-start;} .pg-book-side{align-items:flex-start;} }

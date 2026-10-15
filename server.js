@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 
 const supabase = require('./services/supabase');
 const { decideNextStep } = require('./services/aiEngine');
@@ -36,6 +37,18 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'shalakasi-dev-secret-change-me';
 const MASTERY_THRESHOLD = 0.75;
+const POSTGRAD_MASTERY_THRESHOLD = 0.75;
+
+// Books stay in memory just long enough to stream to Supabase Storage —
+// nothing is ever written to local disk on the server.
+const bookUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype !== 'application/pdf') return cb(new Error('Only PDF files are accepted.'));
+    cb(null, true);
+  },
+});
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -136,7 +149,15 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     });
   }
 
-  res.json({ token, student: { id: student.id, username: student.username, full_name: student.full_name } });
+  res.json({
+    token,
+    student: {
+      id: student.id,
+      username: student.username,
+      full_name: student.full_name,
+      student_type: student.student_type || 'diploma',
+    },
+  });
 });
 
 app.post('/api/auth/logout', requireStudent, (req, res) => {
@@ -389,27 +410,207 @@ app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {
 });
 
 // ---------------------------------------------------------
+// POSTGRAD — library, reading, and per-book tests
+// ---------------------------------------------------------
+
+// Next sort_order for a table (0 when empty).
+async function nextSortOrder(table, filterCol, filterVal) {
+  let q = supabase.from(table).select('sort_order').order('sort_order', { ascending: false }).limit(1);
+  if (filterCol) q = q.eq(filterCol, filterVal);
+  const { data } = await q;
+  return data && data.length ? (data[0].sort_order || 0) + 1 : 0;
+}
+
+// All active books, with this student's reading/test status on each.
+app.get('/api/postgrad/books', requireStudent, async (req, res) => {
+  const { data: books } = await supabase
+    .from('postgrad_books')
+    .select('id, title, author, description, file_name, storage_path, sort_order')
+    .eq('active', true)
+    .order('sort_order');
+
+  const { data: progress } = await supabase
+    .from('postgrad_progress')
+    .select('*')
+    .eq('student_id', req.student.id);
+
+  const progressByBook = Object.fromEntries((progress || []).map((p) => [p.book_id, p]));
+
+  const list = (books || []).map((b) => ({
+    id: b.id,
+    title: b.title,
+    author: b.author,
+    description: b.description,
+    file_name: b.file_name,
+    is_pdf: !!b.storage_path,
+    sort_order: b.sort_order,
+    status: progressByBook[b.id]?.status || 'unread',
+    score_percent: progressByBook[b.id]?.score_percent ?? null,
+    attempts_count: progressByBook[b.id]?.attempts_count || 0,
+  }));
+
+  res.json({ books: list });
+});
+
+// One book: a fresh signed URL (PDF) or the pasted text, plus its test
+// (correct answers withheld). Marks in_progress the first time it's opened.
+app.get('/api/postgrad/books/:id', requireStudent, async (req, res) => {
+  const { data: book, error } = await supabase
+    .from('postgrad_books')
+    .select('*')
+    .eq('id', req.params.id)
+    .eq('active', true)
+    .single();
+
+  if (error || !book) return res.status(404).json({ error: 'Book not found' });
+
+  let fileUrl = null;
+  if (book.storage_path) {
+    const { data: signed, error: signErr } = await supabase.storage
+      .from('postgrad-books')
+      .createSignedUrl(book.storage_path, 60 * 30);
+    if (signErr) return res.status(500).json({ error: 'Could not open this book right now — try again shortly.' });
+    fileUrl = signed.signedUrl;
+  }
+
+  const { data: quiz } = await supabase
+    .from('postgrad_quiz_bank')
+    .select('id, question, options, sort_order')
+    .eq('book_id', book.id)
+    .order('sort_order');
+
+  // Only move unread -> in_progress; never overwrite completed/failed
+  // just because the student re-opened the book to read it again.
+  const { data: existing } = await supabase
+    .from('postgrad_progress')
+    .select('status')
+    .eq('student_id', req.student.id)
+    .eq('book_id', book.id)
+    .maybeSingle();
+
+  if (!existing) {
+    await supabase.from('postgrad_progress').insert({
+      student_id: req.student.id,
+      book_id: book.id,
+      status: 'in_progress',
+    });
+  }
+
+  res.json({
+    book: { id: book.id, title: book.title, author: book.author, description: book.description, file_name: book.file_name },
+    fileUrl,
+    contentText: book.content_text || null,
+    quiz: quiz || [],
+  });
+});
+
+// Submit one test answer. Grades it, and once every question has an
+// answer, scores the whole test and marks the book completed or failed.
+app.post('/api/postgrad/books/:id/attempt', requireStudent, async (req, res) => {
+  const { quizId, selectedIndex } = req.body;
+  const bookId = req.params.id;
+  if (!quizId || !Number.isInteger(selectedIndex)) return res.status(400).json({ error: 'quizId and selectedIndex required' });
+
+  const { data: quizItem } = await supabase
+    .from('postgrad_quiz_bank').select('*').eq('id', quizId).eq('book_id', bookId).single();
+  if (!quizItem) return res.status(404).json({ error: 'Question not found' });
+
+  const isCorrect = quizItem.correct_index === selectedIndex;
+
+  // One answer per question: replace any earlier answer to this question.
+  await supabase.from('postgrad_attempts').delete().eq('student_id', req.student.id).eq('quiz_id', quizId);
+  await supabase.from('postgrad_attempts').insert({
+    student_id: req.student.id,
+    quiz_id: quizId,
+    selected_index: selectedIndex,
+    is_correct: isCorrect,
+  });
+
+  const { data: bookQuizIds } = await supabase.from('postgrad_quiz_bank').select('id').eq('book_id', bookId);
+  const ids = (bookQuizIds || []).map((q) => q.id);
+  const { data: allAttempts } = await supabase
+    .from('postgrad_attempts')
+    .select('is_correct')
+    .eq('student_id', req.student.id)
+    .in('quiz_id', ids);
+
+  const totalQuestions = ids.length;
+  const answeredSoFar = allAttempts?.length || 0;
+  const correctCount = (allAttempts || []).filter((a) => a.is_correct).length;
+
+  let scorePercent = null;
+  let status = 'in_progress';
+  if (totalQuestions > 0 && answeredSoFar >= totalQuestions) {
+    scorePercent = Math.round((correctCount / totalQuestions) * 100);
+    status = scorePercent / 100 >= POSTGRAD_MASTERY_THRESHOLD ? 'completed' : 'failed';
+  }
+
+  await supabase.from('postgrad_progress').upsert(
+    {
+      student_id: req.student.id,
+      book_id: bookId,
+      status,
+      score_percent: scorePercent,
+      attempts_count: answeredSoFar,
+      last_updated: new Date().toISOString(),
+    },
+    { onConflict: 'student_id,book_id' }
+  );
+
+  res.json({ isCorrect, correctIndex: quizItem.correct_index, finished: status !== 'in_progress', scorePercent, status });
+});
+
+// Retake — clears prior answers on this book's test so the student can
+// start again from question 1.
+app.post('/api/postgrad/books/:id/retake', requireStudent, async (req, res) => {
+  const bookId = req.params.id;
+  const { data: bookQuizIds } = await supabase.from('postgrad_quiz_bank').select('id').eq('book_id', bookId);
+  const ids = (bookQuizIds || []).map((q) => q.id);
+
+  if (ids.length) {
+    await supabase.from('postgrad_attempts').delete().eq('student_id', req.student.id).in('quiz_id', ids);
+  }
+
+  await supabase.from('postgrad_progress').upsert(
+    {
+      student_id: req.student.id,
+      book_id: bookId,
+      status: 'in_progress',
+      score_percent: null,
+      attempts_count: 0,
+      last_updated: new Date().toISOString(),
+    },
+    { onConflict: 'student_id,book_id' }
+  );
+
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------
 // ADMIN
 // ---------------------------------------------------------
 app.use('/api/admin', adminLimiter);
 
 app.post('/api/admin/students', requireAdmin, adminKeyFailLimiter, async (req, res) => {
-  const { username, password, full_name, cohort } = req.body;
+  const { username, password, full_name, cohort, student_type } = req.body;
   if (!username || !password || !full_name) {
     return res.status(400).json({ error: 'username, password, full_name required' });
   }
   if (password.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
+  if (student_type && !['diploma', 'postgrad'].includes(student_type)) {
+    return res.status(400).json({ error: "student_type must be 'diploma' or 'postgrad'" });
+  }
   const password_hash = bcrypt.hashSync(password, 10);
   const { data, error } = await supabase
     .from('students')
-    .insert({ username, password_hash, full_name, cohort, created_by: 'admin' })
+    .insert({ username, password_hash, full_name, cohort, created_by: 'admin', student_type: student_type || 'diploma' })
     .select()
     .single();
 
   if (error) return res.status(400).json({ error: error.message });
-  res.json({ id: data.id, username: data.username, full_name: data.full_name });
+  res.json({ id: data.id, username: data.username, full_name: data.full_name, student_type: data.student_type });
 });
 
 app.patch('/api/admin/students/:id/password', requireAdmin, adminKeyFailLimiter, async (req, res) => {
@@ -426,7 +627,7 @@ app.patch('/api/admin/students/:id/password', requireAdmin, adminKeyFailLimiter,
 app.get('/api/admin/students', requireAdmin, async (req, res) => {
   const { data: students } = await supabase
     .from('students')
-    .select('id, username, full_name, cohort, active, created_at')
+    .select('id, username, full_name, cohort, active, student_type, created_at')
     .order('created_at', { ascending: false });
   res.json(students || []);
 });
@@ -656,6 +857,160 @@ app.get('/api/admin/impact', requireAdmin, async (req, res) => {
     chapter_funnel: chapterFunnel,
     toughest_sections: toughestSections,
   });
+});
+
+// Postgrad progress for one student, for the admin detail panel.
+app.get('/api/admin/students/:id/postgrad-progress', requireAdmin, async (req, res) => {
+  const { data } = await supabase
+    .from('postgrad_progress')
+    .select('book_id, status, score_percent, attempts_count, last_updated, postgrad_books(title)')
+    .eq('student_id', req.params.id)
+    .order('last_updated', { ascending: false });
+  res.json(data || []);
+});
+
+// ---------------------------------------------------------
+// ADMIN — postgrad book library
+// ---------------------------------------------------------
+
+app.get('/api/admin/books', requireAdmin, async (req, res) => {
+  const { data } = await supabase
+    .from('postgrad_books')
+    .select('id, title, author, description, file_name, storage_path, sort_order, active, created_at')
+    .order('sort_order');
+  res.json((data || []).map((b) => ({ ...b, is_pdf: !!b.storage_path, storage_path: undefined })));
+});
+
+// Upload a book PDF (multipart/form-data: file, title, author, description).
+// The file goes straight into Supabase Storage — nothing touches local disk.
+app.post('/api/admin/books', requireAdmin, (req, res, next) => {
+  bookUpload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'A PDF file is required.' });
+  const { title, author, description } = req.body;
+  if (!title) return res.status(400).json({ error: 'title is required.' });
+
+  const storagePath = `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+  const { error: uploadErr } = await supabase.storage
+    .from('postgrad-books')
+    .upload(storagePath, req.file.buffer, { contentType: 'application/pdf' });
+  if (uploadErr) return res.status(500).json({ error: `Upload failed: ${uploadErr.message}` });
+
+  const { data, error } = await supabase
+    .from('postgrad_books')
+    .insert({
+      title,
+      author: author || null,
+      description: description || null,
+      storage_path: storagePath,
+      file_name: req.file.originalname,
+      sort_order: await nextSortOrder('postgrad_books'),
+      uploaded_by: 'admin',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    await supabase.storage.from('postgrad-books').remove([storagePath]);
+    return res.status(400).json({ error: error.message });
+  }
+  res.json(data);
+});
+
+// Create a book from pasted text instead of an uploaded PDF.
+app.post('/api/admin/books/text', requireAdmin, async (req, res) => {
+  const { title, author, description, content_text } = req.body;
+  if (!title || !content_text) return res.status(400).json({ error: 'title and content_text are required.' });
+
+  const { data, error } = await supabase
+    .from('postgrad_books')
+    .insert({
+      title,
+      author: author || null,
+      description: description || null,
+      content_text,
+      sort_order: await nextSortOrder('postgrad_books'),
+      uploaded_by: 'admin',
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// Edit / deactivate a book. Deactivating hides it from students but keeps history.
+app.patch('/api/admin/books/:id', requireAdmin, async (req, res) => {
+  const { active, title, author, description, sort_order } = req.body;
+  const update = {};
+  if (active !== undefined) update.active = active;
+  if (title !== undefined) update.title = title;
+  if (author !== undefined) update.author = author;
+  if (description !== undefined) update.description = description;
+  if (sort_order !== undefined) update.sort_order = sort_order;
+
+  const { error } = await supabase.from('postgrad_books').update(update).eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Hard delete — removes the PDF (if any) and the row (cascades to its
+// quiz bank, progress rows and attempts).
+app.delete('/api/admin/books/:id', requireAdmin, async (req, res) => {
+  const { data: book } = await supabase.from('postgrad_books').select('storage_path').eq('id', req.params.id).single();
+  if (book?.storage_path) await supabase.storage.from('postgrad-books').remove([book.storage_path]);
+
+  const { error } = await supabase.from('postgrad_books').delete().eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------
+// ADMIN — per-book test questions
+// ---------------------------------------------------------
+
+app.get('/api/admin/books/:id/quiz', requireAdmin, async (req, res) => {
+  const { data } = await supabase
+    .from('postgrad_quiz_bank')
+    .select('*')
+    .eq('book_id', req.params.id)
+    .order('sort_order');
+  res.json(data || []);
+});
+
+app.post('/api/admin/books/:id/quiz', requireAdmin, async (req, res) => {
+  const { question, options, correct_index } = req.body;
+  if (!question || !Array.isArray(options) || options.length < 2) {
+    return res.status(400).json({ error: 'question and at least 2 options are required.' });
+  }
+  if (!Number.isInteger(correct_index) || correct_index < 0 || correct_index >= options.length) {
+    return res.status(400).json({ error: 'correct_index must point at one of the options.' });
+  }
+
+  const { data, error } = await supabase
+    .from('postgrad_quiz_bank')
+    .insert({
+      book_id: req.params.id,
+      question,
+      options,
+      correct_index,
+      sort_order: await nextSortOrder('postgrad_quiz_bank', 'book_id', req.params.id),
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/admin/quiz/:quizId', requireAdmin, async (req, res) => {
+  const { error } = await supabase.from('postgrad_quiz_bank').delete().eq('id', req.params.quizId);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
 });
 
 const PORT = process.env.PORT || 3300;

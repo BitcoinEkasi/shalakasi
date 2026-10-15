@@ -1,8 +1,7 @@
-// server.js — ShalaKasi backend
+// server.js — Stack & Study backend
 require('dotenv').config();
 
 const express = require('express');
-app.set('trust proxy', 1);
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -14,6 +13,7 @@ const supabase = require('./services/supabase');
 const { decideNextStep } = require('./services/aiEngine');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
@@ -659,4 +659,4 @@ app.get('/api/admin/impact', requireAdmin, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3300;
-app.listen(PORT, () => console.log(`ShalaKasi running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Stack & Study running on http://localhost:${PORT}`));

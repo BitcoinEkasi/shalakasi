@@ -49,6 +49,7 @@ document.querySelectorAll('.admin-tab').forEach((tab) => {
     document.querySelectorAll('.admin-page').forEach((p) => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('page-' + tab.dataset.page).classList.add('active');
+    if (tab.dataset.page === 'books') loadBooks();
     if (tab.dataset.page === 'register') loadRegister();
     if (tab.dataset.page === 'impact') loadImpact();
   });
@@ -60,6 +61,7 @@ document.getElementById('add-student-btn').addEventListener('click', async () =>
   const username = document.getElementById('new-username').value.trim();
   const password = document.getElementById('new-password').value.trim();
   const cohort = document.getElementById('new-cohort').value.trim();
+  const student_type = document.getElementById('new-track').value;
   const statusEl = document.getElementById('add-status');
   statusEl.className = 'add-status';
   statusEl.textContent = '';
@@ -72,7 +74,7 @@ document.getElementById('add-student-btn').addEventListener('click', async () =>
 
   const res = await fetch('/api/admin/students', {
     method: 'POST', headers: adminHeaders(),
-    body: JSON.stringify({ full_name, username, password, cohort }),
+    body: JSON.stringify({ full_name, username, password, cohort, student_type }),
   });
   const data = await res.json();
 
@@ -98,21 +100,22 @@ async function loadStudents() {
   const tbody = document.getElementById('student-rows');
 
   if (!students.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-note">No students yet — add one above.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-note">No students yet — add one above.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = students.map((s) => `
-    <tr class="row-clickable" data-id="${s.id}" data-name="${escapeHtml(s.full_name)}" data-username="${escapeHtml(s.username)}">
+    <tr class="row-clickable" data-id="${s.id}" data-name="${escapeHtml(s.full_name)}" data-username="${escapeHtml(s.username)}" data-type="${s.student_type === 'postgrad' ? 'postgrad' : 'diploma'}">
       <td>${escapeHtml(s.full_name)}</td>
       <td><span class="pill">${escapeHtml(s.username)}</span></td>
       <td>${escapeHtml(s.cohort || '—')}</td>
+      <td><span class="pill ${s.student_type === 'postgrad' ? 'postgrad' : ''}">${s.student_type === 'postgrad' ? 'postgrad' : 'diploma'}</span></td>
       <td><span class="pill ${s.active ? 'active' : ''}">${s.active ? 'active' : 'inactive'}</span></td>
       <td>${new Date(s.created_at).toLocaleDateString()}</td>
     </tr>`).join('');
 
   document.querySelectorAll('.row-clickable').forEach((row) => {
-    row.addEventListener('click', () => openDetail(row.dataset.id, row.dataset.name, row.dataset.username));
+    row.addEventListener('click', () => openDetail(row.dataset.id, row.dataset.name, row.dataset.username, row.dataset.type));
   });
 }
 
@@ -229,10 +232,18 @@ function closeDetail() {
   document.getElementById('overlay').classList.remove('active');
 }
 
-async function openDetail(studentId, fullName, username) {
+async function openDetail(studentId, fullName, username, studentType) {
   currentDetailStudentId = studentId;
+  const isPostgrad = studentType === 'postgrad';
   document.getElementById('detail-name').textContent = fullName;
-  document.getElementById('detail-meta').textContent = `@${username}`;
+  document.getElementById('detail-meta').textContent = `@${username}${isPostgrad ? ' · postgraduate' : ''}`;
+  // Postgrad students have no adaptive-routing decisions or chapter chat,
+  // so hide those tabs for them and make sure Mastery is the one showing.
+  document.querySelectorAll('.detail-tab').forEach((t) => {
+    t.style.display = isPostgrad && (t.dataset.tab === 'decisions' || t.dataset.tab === 'chat') ? 'none' : '';
+    t.classList.toggle('active', t.dataset.tab === 'mastery');
+  });
+  document.querySelectorAll('.detail-section').forEach((sec) => sec.classList.toggle('active', sec.id === 'section-mastery'));
   document.getElementById('detail-panel').classList.add('active');
   document.getElementById('overlay').classList.add('active');
 
@@ -240,6 +251,16 @@ async function openDetail(studentId, fullName, username) {
   document.getElementById('section-decisions').innerHTML = `<p class="empty-note">Loading…</p>`;
   document.getElementById('section-chat').innerHTML = `<p class="empty-note">Loading…</p>`;
   document.getElementById('section-enrolment').innerHTML = `<p class="empty-note">Loading…</p>`;
+
+  if (isPostgrad) {
+    const [pgRes, enrolmentRes] = await Promise.all([
+      fetch(`/api/admin/students/${studentId}/postgrad-progress`, { headers: adminHeaders() }),
+      fetch(`/api/admin/students/${studentId}/enrolment`, { headers: adminHeaders() }),
+    ]);
+    renderPostgradProgress(await pgRes.json());
+    renderEnrolment(await enrolmentRes.json());
+    return;
+  }
 
   if (!curriculumCache) {
     const cRes = await fetch('/api/admin/curriculum', { headers: adminHeaders() });
@@ -261,6 +282,27 @@ async function openDetail(studentId, fullName, username) {
   renderDecisions(decisions);
   renderChat(chat);
   renderEnrolment(enrolment);
+}
+
+function renderPostgradProgress(rows) {
+  const el = document.getElementById('section-mastery');
+  if (!rows.length) {
+    el.innerHTML = `<p class="empty-note">This student hasn't opened any books yet.</p>`;
+    return;
+  }
+  const done = rows.filter((r) => r.status === 'completed').length;
+  el.innerHTML = `
+    <div class="chapter-card">
+      <div class="chapter-card-head"><h4>Books completed</h4><span>${done} of ${rows.length} completed</span></div>
+      ${rows.map((r) => `
+        <div class="quiz-q">
+          <div>
+            <div>${escapeHtml(r.postgrad_books?.title || 'Book')}</div>
+            <div class="opts">${r.attempts_count || 0} answered · ${new Date(r.last_updated).toLocaleDateString()}</div>
+          </div>
+          <div><span class="chip book-chip ${r.status}">${r.status === 'in_progress' ? 'reading' : r.status}${r.score_percent != null ? ' · ' + r.score_percent + '%' : ''}</span></div>
+        </div>`).join('')}
+    </div>`;
 }
 
 function renderMastery(progress) {
@@ -412,5 +454,165 @@ if (adminKey) {
   fetch('/api/admin/students', { headers: adminHeaders() }).then((res) => {
     if (res.ok) enterAdmin();
     else sessionStorage.removeItem('shalakasi_admin_key');
+  });
+}
+
+
+// ---------- POSTGRAD BOOKS ----------
+document.getElementById('book-format').addEventListener('change', (e) => {
+  const isText = e.target.value === 'text';
+  document.getElementById('book-file-field').style.display = isText ? 'none' : '';
+  document.getElementById('book-text-field').style.display = isText ? '' : 'none';
+});
+
+document.getElementById('add-book-btn').addEventListener('click', async () => {
+  const title = document.getElementById('book-title').value.trim();
+  const author = document.getElementById('book-author').value.trim();
+  const description = document.getElementById('book-desc').value.trim();
+  const isText = document.getElementById('book-format').value === 'text';
+  const statusEl = document.getElementById('book-status');
+  const btn = document.getElementById('add-book-btn');
+  statusEl.className = 'add-status';
+  statusEl.textContent = '';
+
+  if (!title) { statusEl.className = 'add-status err'; statusEl.textContent = 'Title is required.'; return; }
+
+  btn.disabled = true;
+  try {
+    let res;
+    if (isText) {
+      const content_text = document.getElementById('book-text').value.trim();
+      if (!content_text) throw new Error('Paste the book text first.');
+      res = await fetch('/api/admin/books/text', {
+        method: 'POST', headers: adminHeaders(),
+        body: JSON.stringify({ title, author, description, content_text }),
+      });
+    } else {
+      const file = document.getElementById('book-file').files[0];
+      if (!file) throw new Error('Choose a PDF file first.');
+      const form = new FormData();
+      form.append('title', title);
+      form.append('author', author);
+      form.append('description', description);
+      form.append('file', file);
+      statusEl.textContent = 'Uploading…';
+      // No Content-Type header: the browser sets the multipart boundary itself.
+      res = await fetch('/api/admin/books', { method: 'POST', headers: { 'x-admin-key': adminKey }, body: form });
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not add the book.');
+
+    statusEl.className = 'add-status ok';
+    statusEl.textContent = `Added "${data.title}". Now add its test questions below.`;
+    ['book-title', 'book-author', 'book-desc', 'book-text', 'book-file'].forEach((id) => { document.getElementById(id).value = ''; });
+    loadBooks();
+  } catch (err) {
+    statusEl.className = 'add-status err';
+    statusEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function loadBooks() {
+  const list = document.getElementById('book-list');
+  const res = await fetch('/api/admin/books', { headers: adminHeaders() });
+  const books = await res.json();
+  if (!books.length) {
+    list.innerHTML = `<p class="empty-note">No books yet — add one above.</p>`;
+    return;
+  }
+  list.innerHTML = books.map((b) => `
+    <div class="book-card ${b.active ? '' : 'inactive'}" data-book="${b.id}">
+      <div class="book-head">
+        <div>
+          <h4>${escapeHtml(b.title)}</h4>
+          <div class="book-meta">${escapeHtml(b.author || 'Unknown author')} · ${b.is_pdf ? 'PDF: ' + escapeHtml(b.file_name || '') : 'Pasted text'}${b.active ? '' : ' · hidden from students'}</div>
+        </div>
+        <div class="book-actions">
+          <button class="mini-btn" data-act="quiz">Test questions</button>
+          <button class="mini-btn" data-act="toggle">${b.active ? 'Hide' : 'Show'}</button>
+          <button class="mini-btn danger" data-act="delete">Delete</button>
+        </div>
+      </div>
+      <div class="quiz-box" style="display:none;"></div>
+    </div>`).join('');
+
+  list.querySelectorAll('.book-card').forEach((card) => {
+    const id = card.dataset.book;
+    const book = books.find((b) => b.id === id);
+    card.querySelector('[data-act="quiz"]').addEventListener('click', () => toggleQuizBox(card, id));
+    card.querySelector('[data-act="toggle"]').addEventListener('click', async () => {
+      await fetch(`/api/admin/books/${id}`, { method: 'PATCH', headers: adminHeaders(), body: JSON.stringify({ active: !book.active }) });
+      loadBooks();
+    });
+    card.querySelector('[data-act="delete"]').addEventListener('click', async () => {
+      if (!confirm(`Delete "${book.title}" permanently? This also removes its test and every student's progress on it.`)) return;
+      const r = await fetch(`/api/admin/books/${id}`, { method: 'DELETE', headers: adminHeaders() });
+      if (!r.ok) { const d = await r.json(); alert(d.error || 'Could not delete.'); return; }
+      loadBooks();
+    });
+  });
+}
+
+async function toggleQuizBox(card, bookId) {
+  const box = card.querySelector('.quiz-box');
+  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.style.display = '';
+  await renderQuizBox(box, bookId);
+}
+
+async function renderQuizBox(box, bookId) {
+  const res = await fetch(`/api/admin/books/${bookId}/quiz`, { headers: adminHeaders() });
+  const quiz = await res.json();
+  box.innerHTML = `
+    ${quiz.length ? quiz.map((q, i) => `
+      <div class="quiz-q">
+        <div>
+          <div>${i + 1}. ${escapeHtml(q.question)}</div>
+          <div class="opts">${q.options.map((o, j) => j === q.correct_index ? `<b>${escapeHtml(o)}</b>` : escapeHtml(o)).join(' · ')}</div>
+        </div>
+        <button class="mini-btn danger" data-del="${q.id}">Remove</button>
+      </div>`).join('') : '<p class="empty-note">No questions yet. Students need at least one to complete this book.</p>'}
+    <div class="quiz-form">
+      <input class="full" type="text" data-f="question" placeholder="Question">
+      <input type="text" data-f="o0" placeholder="Option A">
+      <input type="text" data-f="o1" placeholder="Option B">
+      <input type="text" data-f="o2" placeholder="Option C (optional)">
+      <input type="text" data-f="o3" placeholder="Option D (optional)">
+      <select data-f="correct"><option value="0">Correct: A</option><option value="1">Correct: B</option><option value="2">Correct: C</option><option value="3">Correct: D</option></select>
+      <button class="add-btn" data-f="add">Add question</button>
+    </div>
+    <div class="add-status" data-f="status"></div>`;
+
+  box.querySelectorAll('[data-del]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      await fetch(`/api/admin/quiz/${btn.dataset.del}`, { method: 'DELETE', headers: adminHeaders() });
+      renderQuizBox(box, bookId);
+    });
+  });
+
+  const f = (name) => box.querySelector(`[data-f="${name}"]`);
+  f('add').addEventListener('click', async () => {
+    const question = f('question').value.trim();
+    // Keep option positions: blank options are dropped, so the correct
+    // index must be remapped to the filtered list.
+    const raw = [0, 1, 2, 3].map((i) => f('o' + i).value.trim());
+    const correctRaw = parseInt(f('correct').value, 10);
+    const options = raw.filter(Boolean);
+    const correct_index = raw.slice(0, correctRaw + 1).filter(Boolean).length - 1;
+    const st = f('status');
+    st.className = 'add-status';
+    if (!question || options.length < 2 || !raw[correctRaw]) {
+      st.className = 'add-status err';
+      st.textContent = 'Enter a question, at least two options, and mark a filled-in option as correct.';
+      return;
+    }
+    const r = await fetch(`/api/admin/books/${bookId}/quiz`, {
+      method: 'POST', headers: adminHeaders(), body: JSON.stringify({ question, options, correct_index }),
+    });
+    const d = await r.json();
+    if (!r.ok) { st.className = 'add-status err'; st.textContent = d.error || 'Could not add the question.'; return; }
+    renderQuizBox(box, bookId);
   });
 }

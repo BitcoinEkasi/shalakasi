@@ -85,8 +85,20 @@ function enterApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('active');
   document.getElementById('student-name').textContent = student.full_name;
-  loadNextSection();
   startPriceTicker();
+
+  // Postgrad students read books (Library); diploma students follow the
+  // 10-chapter course. Each track only sees its own rail items.
+  const isPostgrad = student.student_type === 'postgrad';
+  document.querySelector('.rail-btn[data-view="library"]').style.display = isPostgrad ? '' : 'none';
+  document.querySelector('.rail-btn[data-view="course"]').style.display = isPostgrad ? 'none' : '';
+  document.querySelector('.rail-btn[data-view="book"]').style.display = isPostgrad ? 'none' : '';
+  if (isPostgrad) {
+    showView('library');
+  } else {
+    showView('course');
+    loadNextSection();
+  }
 }
 
 // ---------- BTC/ZAR PRICE TICKER ----------
@@ -136,9 +148,10 @@ function showView(name) {
   document.querySelectorAll('.rail-btn').forEach((b) => b.classList.remove('active'));
   document.querySelector(`.rail-btn[data-view="${name}"]`).classList.add('active');
 
-  const titles = { course: 'Course', book: '<b>The Book</b>', dashboard: '<b>Your Progress</b>', live: '<b>Live Bitcoin Network</b>' };
+  const titles = { course: 'Course', library: '<b>Library</b>', book: '<b>The Book</b>', dashboard: '<b>Your Progress</b>', live: '<b>Live Bitcoin Network</b>' };
   document.getElementById('topbar-title').innerHTML = titles[name];
 
+  if (name === 'library') pgLoadLibrary();
   if (name === 'dashboard') loadDashboard();
   if (name === 'book') loadBook();
   if (name === 'live') startLiveNetworkDashboard(); else stopLiveNetworkDashboard();
@@ -823,6 +836,7 @@ async function fetchLiveNetworkData() {
 }
 
 async function loadDashboard() {
+  if (student && student.student_type === 'postgrad') return pgLoadDashboard();
   const res = await fetch('/api/curriculum', { headers: authHeaders(), cache: 'no-store' });
   const data = await res.json();
   const el = document.getElementById('dashboard-content');
@@ -945,4 +959,198 @@ function forceLogout() {
 
 if (token && student) {
   enterApp();
+}
+
+
+// =========================================================
+// POSTGRAD LIBRARY — books + one test per book
+// (all functions prefixed pg* so they never clash with the
+// diploma course code above)
+// =========================================================
+let pgBooks = [];
+let pgState = null; // active test: { bookId, quiz, index, answered }
+
+function pgEsc(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+function pgStatusLabel(b) {
+  if (b.status === 'completed') return `Completed${b.score_percent != null ? ' · ' + b.score_percent + '%' : ''}`;
+  if (b.status === 'failed') return `Not passed${b.score_percent != null ? ' · ' + b.score_percent + '%' : ''}`;
+  if (b.status === 'in_progress') return 'Reading';
+  return 'Not started';
+}
+
+async function pgFetchBooks() {
+  const res = await fetch('/api/postgrad/books', { headers: authHeaders(), cache: 'no-store' });
+  if (res.status === 401) { forceLogout(); return null; }
+  const data = await res.json();
+  pgBooks = data.books || [];
+  return pgBooks;
+}
+
+async function pgLoadLibrary() {
+  const el = document.getElementById('library-content');
+  el.innerHTML = `<p class="body-text">Loading your library…</p>`;
+  const books = await pgFetchBooks();
+  if (!books) return;
+
+  const done = books.filter((b) => b.status === 'completed').length;
+  el.innerHTML = `
+    <h1 class="dash-title">Your library</h1>
+    <p class="dash-sub">${books.length ? `${done} of ${books.length} book${books.length === 1 ? '' : 's'} completed · read each book, then pass its test (75% or more).` : 'No books have been added yet — check back soon.'}</p>
+    <div class="pg-list">
+      ${books.map((b) => `
+        <div class="pg-book">
+          <div class="pg-book-main">
+            <h3>${pgEsc(b.title)}</h3>
+            <div class="pg-book-author">${pgEsc(b.author || '')}</div>
+            ${b.description ? `<p class="pg-book-desc">${pgEsc(b.description)}</p>` : ''}
+          </div>
+          <div class="pg-book-side">
+            <span class="chip book-chip ${b.status}">${pgEsc(pgStatusLabel(b))}</span>
+            <button class="continue-btn pg-open" data-id="${b.id}">${b.status === 'unread' ? 'Start reading' : 'Open'}</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  el.querySelectorAll('.pg-open').forEach((btn) => btn.addEventListener('click', () => pgOpenBook(btn.dataset.id)));
+}
+
+async function pgOpenBook(bookId) {
+  const el = document.getElementById('library-content');
+  el.innerHTML = `<p class="body-text">Opening book…</p>`;
+  const res = await fetch(`/api/postgrad/books/${bookId}`, { headers: authHeaders(), cache: 'no-store' });
+  if (res.status === 401) return forceLogout();
+  const data = await res.json();
+  if (!res.ok) {
+    el.innerHTML = `<p class="body-text">${pgEsc(data.error || 'Could not open this book.')}</p><button class="continue-btn" id="pg-back">Back to library</button>`;
+    document.getElementById('pg-back').addEventListener('click', pgLoadLibrary);
+    return;
+  }
+
+  const meta = pgBooks.find((b) => b.id === bookId) || {};
+  const finished = meta.status === 'completed' || meta.status === 'failed';
+  const hasQuiz = data.quiz.length > 0;
+
+  el.innerHTML = `
+    <button class="pg-back" id="pg-back">← Back to library</button>
+    <h1 class="dash-title">${pgEsc(data.book.title)}</h1>
+    <p class="dash-sub">${pgEsc(data.book.author || '')}</p>
+    ${finished ? `<div class="pg-result ${meta.status}">${meta.status === 'completed' ? 'You passed this book' : 'You have not passed this book yet'} — ${meta.score_percent}%.</div>` : ''}
+    ${data.fileUrl ? `
+      <div class="pdf-frame-wrap"><iframe class="pdf-frame" src="${pgEsc(data.fileUrl)}" title="${pgEsc(data.book.title)}"></iframe></div>
+      <p class="pg-hint">Trouble viewing it here? <a href="${pgEsc(data.fileUrl)}" target="_blank" rel="noopener">Open the PDF in a new tab</a>.</p>` : ''}
+    ${data.contentText ? `<div class="pg-text" id="pg-text"></div>` : ''}
+    <div class="pg-test-cta">
+      ${hasQuiz
+        ? `<button class="continue-btn" id="pg-start-test">${finished ? 'Retake the test' : 'I have finished reading — take the test'}</button>`
+        : `<p class="no-quiz-note">The test for this book hasn't been added yet.</p>`}
+    </div>`;
+
+  if (data.contentText) document.getElementById('pg-text').textContent = data.contentText;
+  document.getElementById('pg-back').addEventListener('click', pgLoadLibrary);
+  const startBtn = document.getElementById('pg-start-test');
+  if (startBtn) {
+    startBtn.addEventListener('click', async () => {
+      startBtn.disabled = true;
+      if (finished) await fetch(`/api/postgrad/books/${bookId}/retake`, { method: 'POST', headers: authHeaders() });
+      pgState = { bookId, title: data.book.title, quiz: data.quiz, index: 0, answered: false };
+      pgRenderTest();
+    });
+  }
+}
+
+function pgRenderTest() {
+  const el = document.getElementById('library-content');
+  const q = pgState.quiz[pgState.index];
+  el.innerHTML = `
+    <button class="pg-back" id="pg-back">← Back to library</button>
+    <h1 class="dash-title">${pgEsc(pgState.title)}</h1>
+    <div class="checkpoint-card">
+      <div class="checkpoint-head"><span class="checkpoint-label">Question ${pgState.index + 1} of ${pgState.quiz.length}</span></div>
+      <div class="checkpoint-q">${pgEsc(q.question)}</div>
+      <div class="quiz-options">
+        ${q.options.map((o, i) => `<div class="quiz-opt" data-i="${i}">${pgEsc(o)}</div>`).join('')}
+      </div>
+      <div id="pg-feedback"></div>
+    </div>`;
+  document.getElementById('pg-back').addEventListener('click', pgLoadLibrary);
+  el.querySelectorAll('.quiz-opt').forEach((opt) => opt.addEventListener('click', () => pgSubmitAnswer(q.id, parseInt(opt.dataset.i, 10))));
+}
+
+async function pgSubmitAnswer(quizId, selectedIndex) {
+  if (pgState.answered) return;
+  pgState.answered = true;
+  const el = document.getElementById('library-content');
+  el.querySelectorAll('.quiz-opt').forEach((o) => o.classList.add('disabled'));
+
+  const res = await fetch(`/api/postgrad/books/${pgState.bookId}/attempt`, {
+    method: 'POST', headers: authHeaders(), body: JSON.stringify({ quizId, selectedIndex }),
+  });
+  if (res.status === 401) return forceLogout();
+  const data = await res.json();
+  if (!res.ok) {
+    pgState.answered = false;
+    el.querySelectorAll('.quiz-opt').forEach((o) => o.classList.remove('disabled'));
+    document.getElementById('pg-feedback').innerHTML = `<p class="no-quiz-note">${pgEsc(data.error || 'Could not save that answer — try again.')}</p>`;
+    return;
+  }
+
+  el.querySelectorAll('.quiz-opt').forEach((o) => {
+    const i = parseInt(o.dataset.i, 10);
+    if (i === data.correctIndex) o.classList.add('correct');
+    else if (i === selectedIndex) o.classList.add('incorrect');
+  });
+
+  const fb = document.getElementById('pg-feedback');
+  fb.innerHTML = `<button class="continue-btn" id="pg-next">${data.finished ? 'See my result' : 'Next question'}</button>`;
+  document.getElementById('pg-next').addEventListener('click', () => {
+    pgState.answered = false;
+    if (data.finished) return pgRenderResult(data);
+    pgState.index += 1;
+    pgRenderTest();
+  });
+}
+
+function pgRenderResult(data) {
+  const el = document.getElementById('library-content');
+  const passed = data.status === 'completed';
+  const bookId = pgState.bookId;
+  el.innerHTML = `
+    <h1 class="dash-title">${passed ? 'Book completed' : 'Not quite yet'}</h1>
+    <div class="pg-result ${passed ? 'completed' : 'failed'}">
+      You scored ${data.scorePercent}% on ${pgEsc(pgState.title)}. ${passed ? 'Well done — this book is marked complete.' : 'You need 75% to pass. Read through it again and retake the test.'}
+    </div>
+    <div class="pg-test-cta">
+      ${passed ? '' : '<button class="continue-btn" id="pg-retake">Retake the test</button> '}
+      <button class="continue-btn pg-secondary" id="pg-library">Back to library</button>
+    </div>`;
+  document.getElementById('pg-library').addEventListener('click', pgLoadLibrary);
+  const retake = document.getElementById('pg-retake');
+  if (retake) retake.addEventListener('click', async () => {
+    await fetch(`/api/postgrad/books/${bookId}/retake`, { method: 'POST', headers: authHeaders() });
+    pgState.index = 0;
+    pgState.answered = false;
+    pgRenderTest();
+  });
+}
+
+async function pgLoadDashboard() {
+  const el = document.getElementById('dashboard-content');
+  el.innerHTML = `<h1 class="dash-title">Your progress</h1><p class="dash-sub">Loading…</p>`;
+  const books = await pgFetchBooks();
+  if (!books) return;
+  const done = books.filter((b) => b.status === 'completed').length;
+  el.innerHTML = `
+    <h1 class="dash-title">${pgEsc(student.full_name)}'s progress</h1>
+    <p class="dash-sub">${done} of ${books.length} book${books.length === 1 ? '' : 's'} completed.</p>
+    ${books.map((b) => `
+      <div class="chapter-card">
+        <div class="chapter-card-head">
+          <h3>${pgEsc(b.title)}</h3>
+          <span class="chip book-chip ${b.status}">${pgEsc(pgStatusLabel(b))}</span>
+        </div>
+      </div>`).join('') || '<p class="body-text">No books have been added yet.</p>'}`;
 }

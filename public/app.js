@@ -424,17 +424,21 @@ async function submitReviewAnswer(quizId, selectedIndex) {
     decisionSlot.innerHTML = `<button class="continue-btn" id="review-next">Next question</button>`;
     document.getElementById('review-next').addEventListener('click', renderReviewQuestion);
   } else {
-    const scorePercent = Math.round((reviewCorrectCount / reviewQuestions.length) * 100);
+    const localScore = Math.round((reviewCorrectCount / reviewQuestions.length) * 100);
     const completeRes = await fetch(`/api/chapters/${reviewChapter.id}/review/complete`, {
-      method: 'POST', headers: authHeaders(), body: JSON.stringify({ score_percent: scorePercent }),
+      method: 'POST', headers: authHeaders(), body: JSON.stringify({ score_percent: localScore }),
     });
     const completeData = await completeRes.json();
+    // The server works out the real score; the browser's own count is only a fallback.
+    const scorePercent = typeof completeData.score_percent === 'number' ? completeData.score_percent : localScore;
 
     const el = document.getElementById('course-content');
 
     if (completeData.passed) {
       let rewardLine = 'Chapter complete!';
-      if (completeData.reward?.status === 'paid') {
+      if (completeData.reward?.status === 'pending') {
+        rewardLine = `🎉 Chapter complete! You earned ${completeData.reward.sats} sats. Your facilitator will approve and send them to your wallet.`;
+      } else if (completeData.reward?.status === 'paid') {
         rewardLine = `🎉 ${completeData.reward.amount_sats} sats sent to your wallet for finishing this chapter!`;
       } else if (completeData.reward?.status === 'no_match') {
         rewardLine = `Chapter complete! Your sats reward is on hold — your wallet isn't linked yet. Check with your facilitator to get that sorted.`;
@@ -1122,6 +1126,7 @@ function pgRenderResult(data) {
     <h1 class="dash-title">${passed ? 'Book completed' : 'Not quite yet'}</h1>
     <div class="pg-result ${passed ? 'completed' : 'failed'}">
       You scored ${data.scorePercent}% on ${pgEsc(pgState.title)}. ${passed ? 'Well done — this book is marked complete.' : 'You need 75% to pass. Read through it again and retake the test.'}
+      ${data.reward ? `<br><b>⚡ You earned ${data.reward.sats} sats.</b> Your facilitator will approve and send them to your wallet.` : ''}
     </div>
     <div class="pg-test-cta">
       ${passed ? '' : '<button class="continue-btn" id="pg-retake">Retake the test</button> '}

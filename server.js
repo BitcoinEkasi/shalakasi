@@ -11,6 +11,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 
 const supabase = require('./services/supabase');
+const bookFiles = require('./services/bookStorage');
 const { decideNextStep } = require('./services/aiEngine');
 
 const app = express();
@@ -481,6 +482,10 @@ async function nextSortOrder(table, filterCol, filterVal) {
   return data && data.length ? (data[0].sort_order || 0) + 1 : 0;
 }
 
+// Signed link to a book PDF (self-hosted storage only). The signature and
+// expiry in the link are the access check, so an <iframe> can load it.
+app.get('/api/postgrad/file/:name', bookFiles.serveSigned);
+
 // All active books, with this student's reading/test status on each.
 app.get('/api/postgrad/books', requireStudent, async (req, res) => {
   const { data: books } = await supabase
@@ -526,11 +531,9 @@ app.get('/api/postgrad/books/:id', requireStudent, async (req, res) => {
 
   let fileUrl = null;
   if (book.storage_path) {
-    const { data: signed, error: signErr } = await supabase.storage
-      .from('postgrad-books')
-      .createSignedUrl(book.storage_path, 60 * 30);
-    if (signErr) return res.status(500).json({ error: 'Could not open this book right now — try again shortly.' });
-    fileUrl = signed.signedUrl;
+    const { url: signedUrl, error: signErr } = await bookFiles.signedUrl(book.storage_path, 60 * 30);
+    if (signErr || !signedUrl) return res.status(500).json({ error: 'Could not open this book right now — try again shortly.' });
+    fileUrl = signedUrl;
   }
 
   const { data: quiz } = await supabase
@@ -970,9 +973,7 @@ app.post('/api/admin/books', requireAdmin, (req, res, next) => {
 
   const storagePath = `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
 
-  const { error: uploadErr } = await supabase.storage
-    .from('postgrad-books')
-    .upload(storagePath, req.file.buffer, { contentType: 'application/pdf' });
+  const { error: uploadErr } = await bookFiles.upload(storagePath, req.file.buffer);
   if (uploadErr) return res.status(500).json({ error: `Upload failed: ${uploadErr.message}` });
 
   const { data, error } = await supabase
@@ -990,7 +991,7 @@ app.post('/api/admin/books', requireAdmin, (req, res, next) => {
     .single();
 
   if (error) {
-    await supabase.storage.from('postgrad-books').remove([storagePath]);
+    await bookFiles.remove(storagePath);
     return res.status(400).json({ error: error.message });
   }
   res.json(data);
@@ -1037,7 +1038,7 @@ app.patch('/api/admin/books/:id', requireAdmin, async (req, res) => {
 // quiz bank, progress rows and attempts).
 app.delete('/api/admin/books/:id', requireAdmin, async (req, res) => {
   const { data: book } = await supabase.from('postgrad_books').select('storage_path').eq('id', req.params.id).single();
-  if (book?.storage_path) await supabase.storage.from('postgrad-books').remove([book.storage_path]);
+  if (book?.storage_path) await bookFiles.remove(book.storage_path);
 
   const { error } = await supabase.from('postgrad_books').delete().eq('id', req.params.id);
   if (error) return res.status(400).json({ error: error.message });

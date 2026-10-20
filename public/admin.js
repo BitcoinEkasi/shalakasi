@@ -251,15 +251,10 @@ async function openDetail(studentId, fullName, username, studentType) {
   document.getElementById('section-mastery').innerHTML = `<p class="empty-note">Loading…</p>`;
   document.getElementById('section-decisions').innerHTML = `<p class="empty-note">Loading…</p>`;
   document.getElementById('section-chat').innerHTML = `<p class="empty-note">Loading…</p>`;
-  document.getElementById('section-enrolment').innerHTML = `<p class="empty-note">Loading…</p>`;
 
   if (isPostgrad) {
-    const [pgRes, enrolmentRes] = await Promise.all([
-      fetch(`/api/admin/students/${studentId}/postgrad-progress`, { headers: adminHeaders() }),
-      fetch(`/api/admin/students/${studentId}/enrolment`, { headers: adminHeaders() }),
-    ]);
+    const pgRes = await fetch(`/api/admin/students/${studentId}/postgrad-progress`, { headers: adminHeaders() });
     renderPostgradProgress(await pgRes.json());
-    renderEnrolment(await enrolmentRes.json());
     return;
   }
 
@@ -268,21 +263,18 @@ async function openDetail(studentId, fullName, username, studentType) {
     curriculumCache = await cRes.json();
   }
 
-  const [progressRes, decisionsRes, chatRes, enrolmentRes] = await Promise.all([
+  const [progressRes, decisionsRes, chatRes] = await Promise.all([
     fetch(`/api/admin/students/${studentId}/progress`, { headers: adminHeaders() }),
     fetch(`/api/admin/students/${studentId}/decisions`, { headers: adminHeaders() }),
     fetch(`/api/admin/students/${studentId}/chat`, { headers: adminHeaders() }),
-    fetch(`/api/admin/students/${studentId}/enrolment`, { headers: adminHeaders() }),
   ]);
   const progress = await progressRes.json();
   const decisions = await decisionsRes.json();
   const chat = await chatRes.json();
-  const enrolment = await enrolmentRes.json();
 
   renderMastery(progress);
   renderDecisions(decisions);
   renderChat(chat);
-  renderEnrolment(enrolment);
 }
 
 function renderPostgradProgress(rows) {

@@ -34,6 +34,7 @@
     <div class="admin-tabs">
       <button class="admin-tab active" data-page="students">Students</button>
       <button class="admin-tab" data-page="books">Books</button>
+      <button class="admin-tab" data-page="payouts">Payouts</button>
       <button class="admin-tab" data-page="register">Register</button>
       <button class="admin-tab" data-page="impact">Impact</button>
     </div>
@@ -101,6 +102,40 @@
       </div>
 
       <div id="book-list"><p class="empty-note">Loading books…</p></div>
+    </div>
+  </div>
+
+  <!-- PAYOUTS PAGE -->
+  <div class="admin-page" id="page-payouts">
+    <div class="admin-body">
+      <h1 class="page-title">Progress payouts</h1>
+      <p class="page-sub">Students earn sats for passing a chapter review or a book test. Rewards wait here until you approve them. Pay the student's Lightning address, then press <b>Mark paid</b>.</p>
+
+      <div class="stat-cards" id="payout-cards">
+        <div class="stat-card"><div class="stat-value" id="pay-pending-count">—</div><div class="stat-label">Waiting for approval</div></div>
+        <div class="stat-card"><div class="stat-value" id="pay-pending-sats">—</div><div class="stat-label">Sats to pay</div></div>
+      </div>
+
+      <div class="register-controls">
+        <div class="field" style="max-width:220px;">
+          <label>Show</label>
+          <select id="payout-filter">
+            <option value="pending">Waiting for approval</option>
+            <option value="paid">Paid</option>
+            <option value="rejected">Rejected</option>
+            <option value="">All</option>
+          </select>
+        </div>
+      </div>
+
+      <table class="student-table" style="margin-top:20px;">
+        <thead>
+          <tr><th>Student</th><th>For</th><th>Sats</th><th>Lightning address</th><th>Earned</th><th></th></tr>
+        </thead>
+        <tbody id="payout-rows">
+          <tr><td colspan="6" class="empty-note">Loading…</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -186,7 +221,8 @@
     <div class="detail-tab active" data-tab="mastery">Mastery</div>
     <div class="detail-tab" data-tab="decisions">Stack &amp; Study's decisions</div>
     <div class="detail-tab" data-tab="chat">Chat log</div>
-    <div class="detail-tab" data-tab="enrolment">Enrolment</div>
+    <!-- Enrolment tab hidden until the enrolment_agreements table is added to the database.
+    <div class="detail-tab" data-tab="enrolment">Enrolment</div> -->
   </div>
   <div class="detail-section active" id="section-mastery"></div>
   <div class="detail-section" id="section-decisions"></div>

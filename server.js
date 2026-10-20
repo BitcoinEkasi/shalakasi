@@ -11,6 +11,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 
 const supabase = require('./services/supabase');
+const bookFiles = require('./services/bookStorage');
 const { decideNextStep } = require('./services/aiEngine');
 
 const app = express();
@@ -38,6 +39,25 @@ app.use(express.static(path.join(__dirname, 'public'), {
 const JWT_SECRET = process.env.JWT_SECRET || 'shalakasi-dev-secret-change-me';
 const MASTERY_THRESHOLD = 0.75;
 const POSTGRAD_MASTERY_THRESHOLD = 0.75;
+const REVIEW_PASS_PERCENT = 70;
+// Sats rewards for progress (pending until an admin approves them).
+const CHAPTER_PASS_SATS = parseInt(process.env.CHAPTER_PASS_SATS, 10) || 500;
+const BOOK_PASS_SATS = parseInt(process.env.BOOK_PASS_SATS, 10) || 1000;
+
+// Logs a reward as pending. Returns {sats, status:'pending'} only when a new
+// reward was created; a student who already earned it gets null (paid once).
+async function createPayoutIfNew(studentId, kind, refId, label, amountSats) {
+  const { data: existing } = await supabase
+    .from('payouts').select('id')
+    .eq('student_id', studentId).eq('kind', kind).eq('ref_id', refId)
+    .maybeSingle();
+  if (existing) return null;
+  const { error } = await supabase.from('payouts').insert({
+    student_id: studentId, kind, ref_id: refId, label, amount_sats: amountSats,
+  });
+  if (error) { console.error('[payouts] could not log reward:', error.message); return null; }
+  return { sats: amountSats, status: 'pending' };
+}
 
 // Books stay in memory just long enough to stream to Supabase Storage —
 // nothing is ever written to local disk on the server.
@@ -306,6 +326,9 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
     section_number: q.sections?.number,
   }));
 
+  // Opening the review starts a fresh attempt: forget earlier recorded answers.
+  await supabase.from('review_answers').delete().eq('student_id', req.student.id).eq('chapter_id', chapter.id);
+
   res.json({ chapter: { id: chapter.id, number: chapter.number, title: chapter.title }, questions: shaped });
 });
 
@@ -314,26 +337,62 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
 // polluting the main attempts/mastery tables with review-time answers.
 app.post('/api/chapters/:id/review/answer', requireStudent, async (req, res) => {
   const { quizId, selectedIndex } = req.body;
-  const { data: quizItem } = await supabase.from('quiz_bank').select('correct_index').eq('id', quizId).single();
-  if (!quizItem) return res.status(404).json({ error: 'Question not found' });
-  res.json({ isCorrect: quizItem.correct_index === selectedIndex, correctIndex: quizItem.correct_index });
+  if (!quizId || !Number.isInteger(selectedIndex)) return res.status(400).json({ error: 'quizId and selectedIndex required' });
+
+  const { data: quizItem } = await supabase
+    .from('quiz_bank').select('correct_index, sections(chapter_id)').eq('id', quizId).single();
+  if (!quizItem || quizItem.sections?.chapter_id !== req.params.id) {
+    return res.status(404).json({ error: 'Question not found' });
+  }
+
+  // Only the FIRST answer to each question counts in a review attempt, so the
+  // answer key can't be discovered by trying every option and re-answering.
+  const { data: prior } = await supabase
+    .from('review_answers').select('is_correct')
+    .eq('student_id', req.student.id).eq('quiz_id', quizId).maybeSingle();
+
+  let isCorrect;
+  if (prior) {
+    isCorrect = prior.is_correct;
+  } else {
+    isCorrect = quizItem.correct_index === selectedIndex;
+    await supabase.from('review_answers').insert({
+      student_id: req.student.id, chapter_id: req.params.id, quiz_id: quizId, is_correct: isCorrect,
+    });
+  }
+  res.json({ isCorrect, correctIndex: quizItem.correct_index });
 });
 
-// Records the final tally once the student has gone through every
-// question. score_percent is computed client-side across the review
-// session — trusted the same way quizIndex sequencing already is
-// elsewhere in this app; the stakes here are pedagogical, not financial.
+// Records the final tally once the student has gone through every question.
+// The score is worked out HERE from the answers the server recorded; the
+// score the browser sends is ignored, because passing now earns sats.
 app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) => {
-  const { score_percent } = req.body;
-  if (typeof score_percent !== 'number' || score_percent < 0 || score_percent > 100) {
-    return res.status(400).json({ error: 'Invalid score_percent' });
+  const chapterId = req.params.id;
+  const { data: chapter } = await supabase.from('chapters').select('id, number').eq('id', chapterId).single();
+  if (!chapter) return res.status(404).json({ error: 'Chapter not found' });
+
+  const { data: sections } = await supabase.from('sections').select('id').eq('chapter_id', chapterId);
+  const sectionIds = (sections || []).map((s) => s.id);
+  const { data: questions } = await supabase.from('quiz_bank').select('id').in('section_id', sectionIds);
+  const total = (questions || []).length;
+
+  let score_percent = 100; // a chapter with no review questions passes, with no reward
+  if (total > 0) {
+    const { data: answers } = await supabase
+      .from('review_answers').select('is_correct')
+      .eq('student_id', req.student.id).eq('chapter_id', chapterId);
+    if ((answers || []).length < total) {
+      return res.status(400).json({ error: 'Answer every review question before finishing.' });
+    }
+    const correct = answers.filter((a) => a.is_correct).length;
+    score_percent = Math.round((correct / total) * 100);
   }
-  const passed = score_percent >= 70;
+  const passed = score_percent >= REVIEW_PASS_PERCENT;
 
   await supabase.from('chapter_reviews').upsert(
     {
       student_id: req.student.id,
-      chapter_id: req.params.id,
+      chapter_id: chapterId,
       score_percent,
       passed,
       completed_at: new Date().toISOString(),
@@ -341,11 +400,13 @@ app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) =
     { onConflict: 'student_id,chapter_id' }
   );
 
-  // Sats reward payment intentionally disabled for now — re-enable by
-  // restoring services/blinkPayment.js and the payment block here once
-  // BITCOINEKASI_SUPABASE_URL / BITCOINEKASI_SUPABASE_SERVICE_ROLE_KEY /
-  // BLINK_API_KEY are actually configured.
-  const reward = null;
+  // Passing earns a reward, logged as pending until an admin approves it.
+  let reward = null;
+  if (passed && total > 0) {
+    reward = await createPayoutIfNew(
+      req.student.id, 'chapter', chapterId, `Chapter ${chapter.number} review`, CHAPTER_PASS_SATS
+    );
+  }
 
   res.json({ passed, score_percent, reward });
 });
@@ -421,6 +482,10 @@ async function nextSortOrder(table, filterCol, filterVal) {
   return data && data.length ? (data[0].sort_order || 0) + 1 : 0;
 }
 
+// Signed link to a book PDF (self-hosted storage only). The signature and
+// expiry in the link are the access check, so an <iframe> can load it.
+app.get('/api/postgrad/file/:name', bookFiles.serveSigned);
+
 // All active books, with this student's reading/test status on each.
 app.get('/api/postgrad/books', requireStudent, async (req, res) => {
   const { data: books } = await supabase
@@ -466,11 +531,9 @@ app.get('/api/postgrad/books/:id', requireStudent, async (req, res) => {
 
   let fileUrl = null;
   if (book.storage_path) {
-    const { data: signed, error: signErr } = await supabase.storage
-      .from('postgrad-books')
-      .createSignedUrl(book.storage_path, 60 * 30);
-    if (signErr) return res.status(500).json({ error: 'Could not open this book right now — try again shortly.' });
-    fileUrl = signed.signedUrl;
+    const { url: signedUrl, error: signErr } = await bookFiles.signedUrl(book.storage_path, 60 * 30);
+    if (signErr || !signedUrl) return res.status(500).json({ error: 'Could not open this book right now — try again shortly.' });
+    fileUrl = signedUrl;
   }
 
   const { data: quiz } = await supabase
@@ -515,16 +578,24 @@ app.post('/api/postgrad/books/:id/attempt', requireStudent, async (req, res) => 
     .from('postgrad_quiz_bank').select('*').eq('id', quizId).eq('book_id', bookId).single();
   if (!quizItem) return res.status(404).json({ error: 'Question not found' });
 
-  const isCorrect = quizItem.correct_index === selectedIndex;
+  // Only the FIRST answer to a question counts until the student retakes the
+  // test, so the answer key can't be found by trying every option.
+  const { data: prior } = await supabase
+    .from('postgrad_attempts').select('is_correct')
+    .eq('student_id', req.student.id).eq('quiz_id', quizId).maybeSingle();
 
-  // One answer per question: replace any earlier answer to this question.
-  await supabase.from('postgrad_attempts').delete().eq('student_id', req.student.id).eq('quiz_id', quizId);
-  await supabase.from('postgrad_attempts').insert({
-    student_id: req.student.id,
-    quiz_id: quizId,
-    selected_index: selectedIndex,
-    is_correct: isCorrect,
-  });
+  let isCorrect;
+  if (prior) {
+    isCorrect = prior.is_correct;
+  } else {
+    isCorrect = quizItem.correct_index === selectedIndex;
+    await supabase.from('postgrad_attempts').insert({
+      student_id: req.student.id,
+      quiz_id: quizId,
+      selected_index: selectedIndex,
+      is_correct: isCorrect,
+    });
+  }
 
   const { data: bookQuizIds } = await supabase.from('postgrad_quiz_bank').select('id').eq('book_id', bookId);
   const ids = (bookQuizIds || []).map((q) => q.id);
@@ -557,7 +628,14 @@ app.post('/api/postgrad/books/:id/attempt', requireStudent, async (req, res) => 
     { onConflict: 'student_id,book_id' }
   );
 
-  res.json({ isCorrect, correctIndex: quizItem.correct_index, finished: status !== 'in_progress', scorePercent, status });
+  // Passing a book earns a reward, pending until an admin approves it.
+  let reward = null;
+  if (status === 'completed') {
+    const { data: bk } = await supabase.from('postgrad_books').select('title').eq('id', bookId).single();
+    reward = await createPayoutIfNew(req.student.id, 'book', bookId, `Book: ${bk?.title || 'book'}`, BOOK_PASS_SATS);
+  }
+
+  res.json({ isCorrect, correctIndex: quizItem.correct_index, finished: status !== 'in_progress', scorePercent, status, reward });
 });
 
 // Retake — clears prior answers on this book's test so the student can
@@ -895,9 +973,7 @@ app.post('/api/admin/books', requireAdmin, (req, res, next) => {
 
   const storagePath = `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
 
-  const { error: uploadErr } = await supabase.storage
-    .from('postgrad-books')
-    .upload(storagePath, req.file.buffer, { contentType: 'application/pdf' });
+  const { error: uploadErr } = await bookFiles.upload(storagePath, req.file.buffer);
   if (uploadErr) return res.status(500).json({ error: `Upload failed: ${uploadErr.message}` });
 
   const { data, error } = await supabase
@@ -915,7 +991,7 @@ app.post('/api/admin/books', requireAdmin, (req, res, next) => {
     .single();
 
   if (error) {
-    await supabase.storage.from('postgrad-books').remove([storagePath]);
+    await bookFiles.remove(storagePath);
     return res.status(400).json({ error: error.message });
   }
   res.json(data);
@@ -962,7 +1038,7 @@ app.patch('/api/admin/books/:id', requireAdmin, async (req, res) => {
 // quiz bank, progress rows and attempts).
 app.delete('/api/admin/books/:id', requireAdmin, async (req, res) => {
   const { data: book } = await supabase.from('postgrad_books').select('storage_path').eq('id', req.params.id).single();
-  if (book?.storage_path) await supabase.storage.from('postgrad-books').remove([book.storage_path]);
+  if (book?.storage_path) await bookFiles.remove(book.storage_path);
 
   const { error } = await supabase.from('postgrad_books').delete().eq('id', req.params.id);
   if (error) return res.status(400).json({ error: error.message });
@@ -1009,6 +1085,53 @@ app.post('/api/admin/books/:id/quiz', requireAdmin, async (req, res) => {
 
 app.delete('/api/admin/quiz/:quizId', requireAdmin, async (req, res) => {
   const { error } = await supabase.from('postgrad_quiz_bank').delete().eq('id', req.params.quizId);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------
+// ADMIN — progress payouts (approve / reject) and Lightning addresses
+// ---------------------------------------------------------
+
+app.get('/api/admin/payouts', requireAdmin, async (req, res) => {
+  const status = req.query.status;
+  let q = supabase
+    .from('payouts')
+    .select('id, kind, label, amount_sats, status, note, created_at, decided_at, student_id, students(full_name, username, lightning_address)')
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (['pending', 'paid', 'rejected'].includes(status)) q = q.eq('status', status);
+  const { data, error } = await q;
+  if (error) return res.status(400).json({ error: error.message });
+
+  const { data: pend } = await supabase.from('payouts').select('amount_sats').eq('status', 'pending');
+  const pendingSats = (pend || []).reduce((n, r) => n + r.amount_sats, 0);
+  res.json({ payouts: data || [], pending_count: (pend || []).length, pending_sats: pendingSats });
+});
+
+// Approve = "I have paid this" (status paid), or reject it. Only pending
+// rewards can be decided, so nothing is marked paid twice.
+app.patch('/api/admin/payouts/:id', requireAdmin, async (req, res) => {
+  const { status, note } = req.body;
+  if (!['paid', 'rejected'].includes(status)) return res.status(400).json({ error: "status must be 'paid' or 'rejected'" });
+  const { data, error } = await supabase
+    .from('payouts')
+    .update({ status, note: note || null, decided_at: new Date().toISOString() })
+    .eq('id', req.params.id)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle();
+  if (error) return res.status(400).json({ error: error.message });
+  if (!data) return res.status(409).json({ error: 'That reward is no longer pending.' });
+  res.json({ ok: true });
+});
+
+app.patch('/api/admin/students/:id/lightning-address', requireAdmin, async (req, res) => {
+  const addr = (req.body.lightning_address || '').trim();
+  if (addr && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) {
+    return res.status(400).json({ error: 'Lightning address must look like name@domain.com' });
+  }
+  const { error } = await supabase.from('students').update({ lightning_address: addr || null }).eq('id', req.params.id);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });

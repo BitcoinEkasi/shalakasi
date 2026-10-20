@@ -50,6 +50,7 @@ document.querySelectorAll('.admin-tab').forEach((tab) => {
     tab.classList.add('active');
     document.getElementById('page-' + tab.dataset.page).classList.add('active');
     if (tab.dataset.page === 'books') loadBooks();
+    if (tab.dataset.page === 'payouts') loadPayouts();
     if (tab.dataset.page === 'register') loadRegister();
     if (tab.dataset.page === 'impact') loadImpact();
   });
@@ -250,15 +251,10 @@ async function openDetail(studentId, fullName, username, studentType) {
   document.getElementById('section-mastery').innerHTML = `<p class="empty-note">Loading…</p>`;
   document.getElementById('section-decisions').innerHTML = `<p class="empty-note">Loading…</p>`;
   document.getElementById('section-chat').innerHTML = `<p class="empty-note">Loading…</p>`;
-  document.getElementById('section-enrolment').innerHTML = `<p class="empty-note">Loading…</p>`;
 
   if (isPostgrad) {
-    const [pgRes, enrolmentRes] = await Promise.all([
-      fetch(`/api/admin/students/${studentId}/postgrad-progress`, { headers: adminHeaders() }),
-      fetch(`/api/admin/students/${studentId}/enrolment`, { headers: adminHeaders() }),
-    ]);
+    const pgRes = await fetch(`/api/admin/students/${studentId}/postgrad-progress`, { headers: adminHeaders() });
     renderPostgradProgress(await pgRes.json());
-    renderEnrolment(await enrolmentRes.json());
     return;
   }
 
@@ -267,21 +263,18 @@ async function openDetail(studentId, fullName, username, studentType) {
     curriculumCache = await cRes.json();
   }
 
-  const [progressRes, decisionsRes, chatRes, enrolmentRes] = await Promise.all([
+  const [progressRes, decisionsRes, chatRes] = await Promise.all([
     fetch(`/api/admin/students/${studentId}/progress`, { headers: adminHeaders() }),
     fetch(`/api/admin/students/${studentId}/decisions`, { headers: adminHeaders() }),
     fetch(`/api/admin/students/${studentId}/chat`, { headers: adminHeaders() }),
-    fetch(`/api/admin/students/${studentId}/enrolment`, { headers: adminHeaders() }),
   ]);
   const progress = await progressRes.json();
   const decisions = await decisionsRes.json();
   const chat = await chatRes.json();
-  const enrolment = await enrolmentRes.json();
 
   renderMastery(progress);
   renderDecisions(decisions);
   renderChat(chat);
-  renderEnrolment(enrolment);
 }
 
 function renderPostgradProgress(rows) {
@@ -614,5 +607,73 @@ async function renderQuizBox(box, bookId) {
     const d = await r.json();
     if (!r.ok) { st.className = 'add-status err'; st.textContent = d.error || 'Could not add the question.'; return; }
     renderQuizBox(box, bookId);
+  });
+}
+
+
+// ---------- PAYOUTS ----------
+document.getElementById('payout-filter').addEventListener('change', loadPayouts);
+
+async function loadPayouts() {
+  const filter = document.getElementById('payout-filter').value;
+  const tbody = document.getElementById('payout-rows');
+  const res = await fetch('/api/admin/payouts' + (filter ? `?status=${filter}` : ''), { headers: adminHeaders() });
+  const data = await res.json();
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="6" class="empty-note">${escapeHtml(data.error || 'Could not load payouts.')}</td></tr>`; return; }
+
+  document.getElementById('pay-pending-count').textContent = data.pending_count;
+  document.getElementById('pay-pending-sats').textContent = data.pending_sats.toLocaleString();
+
+  if (!data.payouts.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-note">Nothing here.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.payouts.map((p) => `
+    <tr data-id="${p.id}" data-student="${p.student_id}">
+      <td>${escapeHtml(p.students?.full_name || '—')}<div class="book-meta">@${escapeHtml(p.students?.username || '')}</div></td>
+      <td>${escapeHtml(p.label)}</td>
+      <td>${p.amount_sats.toLocaleString()}</td>
+      <td>
+        <div class="ln-cell">
+          <input type="text" class="ln-input" value="${escapeHtml(p.students?.lightning_address || '')}" placeholder="name@wallet.com">
+          <button class="mini-btn" data-act="save-ln">Save</button>
+          <button class="mini-btn" data-act="copy-ln">Copy</button>
+        </div>
+      </td>
+      <td>${new Date(p.created_at).toLocaleDateString()}</td>
+      <td>${p.status === 'pending'
+        ? `<button class="mini-btn" data-act="paid">Mark paid</button> <button class="mini-btn danger" data-act="reject">Reject</button>`
+        : `<span class="pill ${p.status === 'paid' ? 'active' : ''}">${p.status}</span>`}</td>
+    </tr>`).join('');
+
+  tbody.querySelectorAll('tr[data-id]').forEach((row) => {
+    const id = row.dataset.id;
+    const input = row.querySelector('.ln-input');
+    row.querySelector('[data-act="save-ln"]').addEventListener('click', async () => {
+      const r = await fetch(`/api/admin/students/${row.dataset.student}/lightning-address`, {
+        method: 'PATCH', headers: adminHeaders(), body: JSON.stringify({ lightning_address: input.value }),
+      });
+      const d = await r.json();
+      if (!r.ok) { alert(d.error || 'Could not save the address.'); return; }
+      loadPayouts();
+    });
+    row.querySelector('[data-act="copy-ln"]').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(input.value); } catch (e) { input.select(); }
+    });
+    const decide = async (status) => {
+      const r = await fetch(`/api/admin/payouts/${id}`, { method: 'PATCH', headers: adminHeaders(), body: JSON.stringify({ status }) });
+      const d = await r.json();
+      if (!r.ok) { alert(d.error || 'Could not update.'); }
+      loadPayouts();
+    };
+    const paidBtn = row.querySelector('[data-act="paid"]');
+    if (paidBtn) {
+      paidBtn.addEventListener('click', () => {
+        if (!input.value.trim()) { alert('Add the student\'s Lightning address first, pay it, then press Mark paid.'); return; }
+        decide('paid');
+      });
+      row.querySelector('[data-act="reject"]').addEventListener('click', () => decide('rejected'));
+    }
   });
 }

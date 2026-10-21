@@ -11,6 +11,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 
 const supabase = require('./services/supabase');
+const quizMix = require('./services/quizMix');
 const bookFiles = require('./services/bookStorage');
 const { decideNextStep } = require('./services/aiEngine');
 
@@ -126,6 +127,21 @@ function todayLocalDate() {
 }
 
 // ---------------------------------------------------------
+// Attendance tracker link: after a login, tell the tracker who logged in and from which address.
+// Set TRACKER_URL and TRACKER_KEY in .env to turn this on; without them nothing is sent.
+// ---------------------------------------------------------
+function notifyTracker(name, ip) {
+  const url = process.env.TRACKER_URL, key = process.env.TRACKER_KEY;
+  if (!url || !key) return;
+  fetch(`${url}/integrations/stack-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Integration-Key': key },
+    body: JSON.stringify({ name, ip: String(ip || '').replace(/^::ffff:/, '') }),
+    signal: AbortSignal.timeout(4000),
+  }).catch((e) => console.log('tracker notice failed:', e.message));
+}
+
+// ---------------------------------------------------------
 // AUTH
 // ---------------------------------------------------------
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
@@ -168,6 +184,9 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       log_date: logDate,
     });
   }
+
+  // Tell the attendance tracker this student logged in (it decides if it was in class). Never blocks login.
+  notifyTracker(student.full_name, req.ip);
 
   res.json({
     token,
@@ -258,8 +277,10 @@ app.get('/api/sections/:id', requireStudent, async (req, res) => {
 
   const { data: quiz } = await supabase
     .from('quiz_bank')
-    .select('id, question, options, difficulty')
+    .select('id, question, options, difficulty, section_id')
     .eq('section_id', section.id);
+  // Each student gets one question per section, with the answers in their own order.
+  const myQuiz = quizMix.pickPerSection(req.student.id, quiz || []).map((q) => quizMix.presentQuestion(req.student.id, q));
 
   await supabase.from('student_progress').upsert(
     {
@@ -271,7 +292,7 @@ app.get('/api/sections/:id', requireStudent, async (req, res) => {
     { onConflict: 'student_id,section_id', ignoreDuplicates: false }
   );
 
-  res.json({ section, quiz: quiz || [] });
+  res.json({ section, quiz: myQuiz });
 });
 
 app.post('/api/sections/:id/complete', requireStudent, async (req, res) => {
@@ -303,6 +324,12 @@ app.post('/api/sections/:id/complete', requireStudent, async (req, res) => {
 // it's a reflection/reinforcement tool, not a hard wall.
 // ---------------------------------------------------------
 
+// How many times this student has finished this chapter's review; each attempt gets a fresh mix.
+async function reviewRound(studentId, chapterId) {
+  const { data } = await supabase.from('chapter_reviews').select('attempts').eq('student_id', studentId).eq('chapter_id', chapterId).maybeSingle();
+  return (data && data.attempts) || 0;
+}
+
 app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
   const { data: chapter, error: chErr } = await supabase
     .from('chapters')
@@ -319,10 +346,13 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
     .select('id, question, options, section_id, sections(number)')
     .in('section_id', sectionIds);
 
-  const shaped = (questions || []).map((q) => ({
+  // One question per section for this student, in their own order, answers shuffled.
+  const round = await reviewRound(req.student.id, chapter.id);
+  const mine = quizMix.orderQuestions(req.student.id, quizMix.pickPerSection(req.student.id, questions || [], round), round);
+  const shaped = mine.map((q) => ({
     id: q.id,
     question: q.question,
-    options: q.options,
+    options: quizMix.presentQuestion(req.student.id, q, round).options,
     section_number: q.sections?.number,
   }));
 
@@ -340,10 +370,19 @@ app.post('/api/chapters/:id/review/answer', requireStudent, async (req, res) => 
   if (!quizId || !Number.isInteger(selectedIndex)) return res.status(400).json({ error: 'quizId and selectedIndex required' });
 
   const { data: quizItem } = await supabase
-    .from('quiz_bank').select('correct_index, sections(chapter_id)').eq('id', quizId).single();
+    .from('quiz_bank').select('correct_index, options, section_id, sections(chapter_id)').eq('id', quizId).single();
   if (!quizItem || quizItem.sections?.chapter_id !== req.params.id) {
     return res.status(404).json({ error: 'Question not found' });
   }
+  const round = await reviewRound(req.student.id, req.params.id);
+  const { data: allQs } = await supabase.from('quiz_bank').select('id, section_id, sections!inner(chapter_id)').eq('sections.chapter_id', req.params.id);
+  if (!quizMix.pickPerSection(req.student.id, allQs || [], round).some((q) => q.id === quizId)) {
+    return res.status(404).json({ error: 'Question not found' });
+  }
+  const optCount = (quizItem.options || []).length;
+  if (selectedIndex < 0 || selectedIndex >= optCount) return res.status(400).json({ error: 'Invalid answer' });
+  const originalIndex = quizMix.toOriginalIndex(req.student.id, quizId, optCount, selectedIndex, round);
+  const shownCorrect = quizMix.toDisplayedIndex(req.student.id, quizId, optCount, quizItem.correct_index, round);
 
   // Only the FIRST answer to each question counts in a review attempt, so the
   // answer key can't be discovered by trying every option and re-answering.
@@ -355,12 +394,12 @@ app.post('/api/chapters/:id/review/answer', requireStudent, async (req, res) => 
   if (prior) {
     isCorrect = prior.is_correct;
   } else {
-    isCorrect = quizItem.correct_index === selectedIndex;
+    isCorrect = quizItem.correct_index === originalIndex;
     await supabase.from('review_answers').insert({
       student_id: req.student.id, chapter_id: req.params.id, quiz_id: quizId, is_correct: isCorrect,
     });
   }
-  res.json({ isCorrect, correctIndex: quizItem.correct_index });
+  res.json({ isCorrect, correctIndex: shownCorrect });
 });
 
 // Records the final tally once the student has gone through every question.
@@ -373,8 +412,9 @@ app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) =
 
   const { data: sections } = await supabase.from('sections').select('id').eq('chapter_id', chapterId);
   const sectionIds = (sections || []).map((s) => s.id);
-  const { data: questions } = await supabase.from('quiz_bank').select('id').in('section_id', sectionIds);
-  const total = (questions || []).length;
+  const { data: questions } = await supabase.from('quiz_bank').select('id, section_id').in('section_id', sectionIds);
+  const round = await reviewRound(req.student.id, chapterId);
+  const total = quizMix.pickPerSection(req.student.id, questions || [], round).length;
 
   let score_percent = 100; // a chapter with no review questions passes, with no reward
   if (total > 0) {
@@ -395,6 +435,7 @@ app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) =
       chapter_id: chapterId,
       score_percent,
       passed,
+      attempts: round + 1,
       completed_at: new Date().toISOString(),
     },
     { onConflict: 'student_id,chapter_id' }
@@ -416,20 +457,28 @@ app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {
   const sectionId = req.params.id;
 
   const { data: quizItem } = await supabase.from('quiz_bank').select('*').eq('id', quizId).single();
-  if (!quizItem) return res.status(404).json({ error: 'Question not found' });
+  if (!quizItem || quizItem.section_id !== sectionId) return res.status(404).json({ error: 'Question not found' });
 
-  const isCorrect = quizItem.correct_index === selectedIndex;
+  // Only the question this student was given may be answered (so other variants' answers can't be probed).
+  const { data: sectionQs } = await supabase.from('quiz_bank').select('id, section_id').eq('section_id', sectionId);
+  const mine = quizMix.pickPerSection(req.student.id, sectionQs || []);
+  if (!mine.some((q) => q.id === quizItem.id)) return res.status(404).json({ error: 'Question not found' });
+
+  const optCount = (quizItem.options || []).length;
+  if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= optCount) return res.status(400).json({ error: 'Invalid answer' });
+  const originalIndex = quizMix.toOriginalIndex(req.student.id, quizItem.id, optCount, selectedIndex);
+  const shownCorrect = quizMix.toDisplayedIndex(req.student.id, quizItem.id, optCount, quizItem.correct_index);
+  const isCorrect = quizItem.correct_index === originalIndex;
 
   await supabase.from('attempts').insert({
     student_id: req.student.id,
     quiz_id: quizId,
-    selected_index: selectedIndex,
+    selected_index: originalIndex,
     is_correct: isCorrect,
     response_time_ms: responseTimeMs || null,
   });
 
-  const { data: sectionQuizIds } = await supabase.from('quiz_bank').select('id').eq('section_id', sectionId);
-  const ids = (sectionQuizIds || []).map((q) => q.id);
+  const ids = mine.map((q) => q.id);
   const { data: allAttempts } = await supabase
     .from('attempts')
     .select('is_correct')
@@ -467,7 +516,7 @@ app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {
     });
   }
 
-  res.json({ isCorrect, correctIndex: quizItem.correct_index, scorePercent, decision });
+  res.json({ isCorrect, correctIndex: shownCorrect, scorePercent, decision });
 });
 
 // ---------------------------------------------------------
@@ -541,6 +590,7 @@ app.get('/api/postgrad/books/:id', requireStudent, async (req, res) => {
     .select('id, question, options, sort_order')
     .eq('book_id', book.id)
     .order('sort_order');
+  const myBookQuiz = quizMix.orderQuestions(req.student.id, (quiz || []).map((q) => quizMix.presentQuestion(req.student.id, q)));
 
   // Only move unread -> in_progress; never overwrite completed/failed
   // just because the student re-opened the book to read it again.
@@ -563,7 +613,7 @@ app.get('/api/postgrad/books/:id', requireStudent, async (req, res) => {
     book: { id: book.id, title: book.title, author: book.author, description: book.description, file_name: book.file_name },
     fileUrl,
     contentText: book.content_text || null,
-    quiz: quiz || [],
+    quiz: myBookQuiz,
   });
 });
 
@@ -577,6 +627,10 @@ app.post('/api/postgrad/books/:id/attempt', requireStudent, async (req, res) => 
   const { data: quizItem } = await supabase
     .from('postgrad_quiz_bank').select('*').eq('id', quizId).eq('book_id', bookId).single();
   if (!quizItem) return res.status(404).json({ error: 'Question not found' });
+  const pgCount = (quizItem.options || []).length;
+  if (selectedIndex < 0 || selectedIndex >= pgCount) return res.status(400).json({ error: 'Invalid answer' });
+  const originalIndex = quizMix.toOriginalIndex(req.student.id, quizId, pgCount, selectedIndex);
+  const shownCorrect = quizMix.toDisplayedIndex(req.student.id, quizId, pgCount, quizItem.correct_index);
 
   // Only the FIRST answer to a question counts until the student retakes the
   // test, so the answer key can't be found by trying every option.
@@ -588,11 +642,11 @@ app.post('/api/postgrad/books/:id/attempt', requireStudent, async (req, res) => 
   if (prior) {
     isCorrect = prior.is_correct;
   } else {
-    isCorrect = quizItem.correct_index === selectedIndex;
+    isCorrect = quizItem.correct_index === originalIndex;
     await supabase.from('postgrad_attempts').insert({
       student_id: req.student.id,
       quiz_id: quizId,
-      selected_index: selectedIndex,
+      selected_index: originalIndex,
       is_correct: isCorrect,
     });
   }
@@ -635,7 +689,7 @@ app.post('/api/postgrad/books/:id/attempt', requireStudent, async (req, res) => 
     reward = await createPayoutIfNew(req.student.id, 'book', bookId, `Book: ${bk?.title || 'book'}`, BOOK_PASS_SATS);
   }
 
-  res.json({ isCorrect, correctIndex: quizItem.correct_index, finished: status !== 'in_progress', scorePercent, status, reward });
+  res.json({ isCorrect, correctIndex: shownCorrect, finished: status !== 'in_progress', scorePercent, status, reward });
 });
 
 // Retake — clears prior answers on this book's test so the student can

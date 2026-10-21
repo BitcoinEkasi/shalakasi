@@ -102,6 +102,7 @@ create table chapter_reviews (
   chapter_id     uuid not null references chapters(id) on delete cascade,
   score_percent  integer not null,
   passed         boolean not null,
+  attempts       int not null default 0,
   completed_at   timestamptz not null default now(),
   unique (student_id, chapter_id)
 );

@@ -12,6 +12,7 @@ const multer = require('multer');
 
 const supabase = require('./services/supabase');
 const quizMix = require('./services/quizMix');
+const studyPlan = require('./services/studyPlan');
 const bookFiles = require('./services/bookStorage');
 const { decideNextStep } = require('./services/aiEngine');
 
@@ -127,16 +128,34 @@ function todayLocalDate() {
 }
 
 // ---------------------------------------------------------
+// Study pace: the most new sections a student can start in one week (Monday to Sunday, South African time).
+// The limit begins on STUDY_WEEK1_START, which is also the first Monday of the two-week centre rotation.
+// ---------------------------------------------------------
+const SECTIONS_PER_WEEK = parseInt(process.env.SECTIONS_PER_WEEK, 10) || 3;
+const STUDY_WEEK1_START = process.env.STUDY_WEEK1_START || '2026-11-02';
+
+// Midnight (South African time) on the first Monday of the centre rotation.
+function studyStartMs() { const [y, m, d] = STUDY_WEEK1_START.split('-').map(Number); return Date.UTC(y, m - 1, d) - 2 * 3600 * 1000; }
+
+async function getPace(studentId) {
+  const { data } = await supabase.from('student_progress').select('status, mastered_at').eq('student_id', studentId);
+  const now = new Date();
+  const pace = studyPlan.paceState(data || [], SECTIONS_PER_WEEK, now);
+  if (now.getTime() < studyStartMs()) pace.blocked = false; // the limit has not started yet
+  return pace;
+}
+
+// ---------------------------------------------------------
 // Attendance tracker link: after a login, tell the tracker who logged in and from which address.
 // Set TRACKER_URL and TRACKER_KEY in .env to turn this on; without them nothing is sent.
 // ---------------------------------------------------------
-function notifyTracker(name, ip) {
+function notifyTracker(name, ip, scheduledToday) {
   const url = process.env.TRACKER_URL, key = process.env.TRACKER_KEY;
   if (!url || !key) return;
   fetch(`${url}/integrations/stack-login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Integration-Key': key },
-    body: JSON.stringify({ name, ip: String(ip || '').replace(/^::ffff:/, '') }),
+    body: JSON.stringify({ name, ip: String(ip || '').replace(/^::ffff:/, ''), scheduled_today: scheduledToday }),
     signal: AbortSignal.timeout(4000),
   }).catch((e) => console.log('tracker notice failed:', e.message));
 }
@@ -186,7 +205,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
   }
 
   // Tell the attendance tracker this student logged in (it decides if it was in class). Never blocks login.
-  notifyTracker(student.full_name, req.ip);
+  notifyTracker(student.full_name, req.ip, (Date.now() < studyStartMs() ? null : studyPlan.scheduledToday(student.study_group, new Date(), STUDY_WEEK1_START)));
 
   res.json({
     token,
@@ -240,7 +259,7 @@ app.get('/api/curriculum', requireStudent, async (req, res) => {
       })),
   }));
 
-  res.json({ chapters: tree });
+  res.json({ chapters: tree, pace: await getPace(req.student.id) });
 });
 
 app.get('/api/book', requireStudent, async (req, res) => {
@@ -278,6 +297,12 @@ app.get('/api/me/sats', requireStudent, async (req, res) => {
   res.json({ total: paid + pending, paid, pending });
 });
 
+// The moment a section was first mastered: kept if it already has one, so revising never counts twice towards the weekly pace.
+async function masteredAtFor(studentId, sectionId) {
+  const { data } = await supabase.from('student_progress').select('mastered_at').eq('student_id', studentId).eq('section_id', sectionId).maybeSingle();
+  return data?.mastered_at || new Date().toISOString();
+}
+
 app.get('/api/sections/:id', requireStudent, async (req, res) => {
   const { data: section, error } = await supabase
     .from('sections')
@@ -294,15 +319,27 @@ app.get('/api/sections/:id', requireStudent, async (req, res) => {
   // Each student gets one question per section, with the answers in their own order.
   const myQuiz = quizMix.pickPerSection(req.student.id, quiz || []).map((q) => quizMix.presentQuestion(req.student.id, q));
 
-  await supabase.from('student_progress').upsert(
-    {
-      student_id: req.student.id,
-      section_id: section.id,
-      status: 'in_progress',
-      last_updated: new Date().toISOString(),
-    },
-    { onConflict: 'student_id,section_id', ignoreDuplicates: false }
-  );
+  // Starting a brand-new section counts against the weekly pace; one already started or mastered can always be opened.
+  const { data: existingProgress } = await supabase
+    .from('student_progress').select('status').eq('student_id', req.student.id).eq('section_id', section.id).maybeSingle();
+  if (!existingProgress) {
+    const pace = await getPace(req.student.id);
+    if (pace.blocked) {
+      return res.status(403).json({ error: 'weekly_limit', message: 'You have done your sections for this week.', pace });
+    }
+  }
+  // Opening a section never takes away a mastery it already has.
+  if (!existingProgress || ['locked', 'available'].includes(existingProgress.status)) {
+    await supabase.from('student_progress').upsert(
+      {
+        student_id: req.student.id,
+        section_id: section.id,
+        status: 'in_progress',
+        last_updated: new Date().toISOString(),
+      },
+      { onConflict: 'student_id,section_id', ignoreDuplicates: false }
+    );
+  }
 
   res.json({ section, quiz: myQuiz });
 });
@@ -319,6 +356,7 @@ app.post('/api/sections/:id/complete', requireStudent, async (req, res) => {
       section_id: req.params.id,
       status: 'mastered',
       mastery_score: 1,
+      mastered_at: await masteredAtFor(req.student.id, req.params.id),
       last_updated: new Date().toISOString(),
     },
     { onConflict: 'student_id,section_id' }
@@ -509,6 +547,7 @@ app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {
       section_id: sectionId,
       status: newStatus,
       mastery_score: masteryScore,
+      ...(newStatus === 'mastered' ? { mastered_at: await masteredAtFor(req.student.id, sectionId) } : {}),
       last_updated: new Date().toISOString(),
     },
     { onConflict: 'student_id,section_id' }

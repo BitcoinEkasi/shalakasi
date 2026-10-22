@@ -37,7 +37,8 @@ create table students (
   active             boolean not null default true,
   created_at         timestamptz not null default now(),
   student_type       text not null default 'diploma' check (student_type in ('diploma', 'postgrad')),
-  lightning_address  text
+  lightning_address  text,
+  study_group        smallint check (study_group in (1, 2))
 );
 
 create table quiz_bank (
@@ -60,6 +61,7 @@ create table student_progress (
   mastery_score   numeric(4,3) not null default 0,
   attempts_count  integer not null default 0,
   last_updated    timestamptz not null default now(),
+  mastered_at     timestamptz,
   unique (student_id, section_id)
 );
 create index idx_progress_student on student_progress(student_id);

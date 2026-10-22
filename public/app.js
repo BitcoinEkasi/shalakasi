@@ -173,10 +173,24 @@ function showView(name) {
 }
 
 // ---------- COURSE ----------
+let paceInfo = null;
+
+// Shown when a student has used this week's sections: nothing is wrong, the next one just opens on Monday.
+function showPaceWait(pace) {
+  const opens = new Date(pace.opens_on).toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Johannesburg' });
+  const el = document.getElementById('course-content');
+  el.innerHTML = `
+    <div class="crumb">Chapter pace</div>
+    <h1 class="section-title">That's enough for this week</h1>
+    <div class="review-note">You have finished your ${pace.limit} sections for this week. Your next section opens on <b>${opens}</b>. Until then you can go back over any section you have already done.</div>
+  `;
+}
+
 async function loadNextSection() {
   const res = await fetch('/api/curriculum', { headers: authHeaders(), cache: 'no-store' });
   if (res.status === 401) return forceLogout();
   const data = await res.json();
+  paceInfo = data.pace || null;
 
   // Chapter review gate: the first chapter (in order) that's fully
   // mastered but hasn't had its cumulative review attempted yet blocks
@@ -200,6 +214,11 @@ async function loadNextSection() {
 
   if (!target) {
     renderCertificate(data.chapters);
+    return;
+  }
+
+  if (paceInfo?.blocked && !['in_progress', 'reinforced'].includes(target.status)) {
+    showPaceWait(paceInfo);
     return;
   }
 
@@ -296,6 +315,7 @@ async function loadSection(sectionId, chapterNumber, chapterTitle) {
   const res = await fetch(`/api/sections/${sectionId}`, { headers: authHeaders() });
   if (res.status === 401) return forceLogout();
   const data = await res.json();
+  if (res.status === 403 && data.error === 'weekly_limit') { showPaceWait(data.pace); return; }
   currentQuiz = data.quiz || [];
 
   const el = document.getElementById('course-content');

@@ -180,6 +180,7 @@ create table payouts (
   note         text,
   created_at   timestamptz not null default now(),
   decided_at   timestamptz,
+  sent_to_tracker boolean not null default false,
   unique (student_id, kind, ref_id)
 );
 create index idx_payouts_status on payouts(status);

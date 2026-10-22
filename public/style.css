@@ -61,6 +61,8 @@ body{
 .topbar-right{display:flex; align-items:center; gap:18px;}
 
 .price-ticker{display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono', monospace; font-size:12px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:6px 13px; color:var(--text-dim); white-space:nowrap;}
+.sats-chip{display:flex; align-items:center; gap:6px; font-family:'JetBrains Mono', monospace; font-size:12px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:6px 13px; color:var(--text-dim); white-space:nowrap;}
+.sats-chip .sats-num{color:var(--orange); font-weight:600;}
 .price-ticker .btc-symbol{color:var(--orange); font-weight:600;}
 .price-ticker .price-value{color:var(--text);}
 .price-ticker .price-change{font-size:10.5px; padding:2px 6px; border-radius:10px;}

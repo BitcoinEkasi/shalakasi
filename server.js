@@ -266,6 +266,18 @@ app.get('/api/book', requireStudent, async (req, res) => {
   res.json({ chapters: tree });
 });
 
+// The student's own running total of sats earned (paid + still waiting for approval; rejected ones don't count).
+app.get('/api/me/sats', requireStudent, async (req, res) => {
+  const { data, error } = await supabase.from('payouts').select('amount_sats, status').eq('student_id', req.student.id);
+  if (error) return res.status(500).json({ error: 'Could not load sats' });
+  let paid = 0, pending = 0;
+  for (const p of data || []) {
+    if (p.status === 'paid') paid += p.amount_sats || 0;
+    else if (p.status === 'pending') pending += p.amount_sats || 0;
+  }
+  res.json({ total: paid + pending, paid, pending });
+});
+
 app.get('/api/sections/:id', requireStudent, async (req, res) => {
   const { data: section, error } = await supabase
     .from('sections')

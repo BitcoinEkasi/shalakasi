@@ -86,6 +86,7 @@ function enterApp() {
   document.getElementById('app').classList.add('active');
   document.getElementById('student-name').textContent = student.full_name;
   startPriceTicker();
+  refreshSatsChip();
 
   // Postgrad students read books (Library); diploma students follow the
   // 10-chapter course. Each track only sees its own rail items.
@@ -99,6 +100,20 @@ function enterApp() {
     showView('course');
     loadNextSection();
   }
+}
+
+// ---------- SATS EARNED CHIP ----------
+async function refreshSatsChip() {
+  const el = document.getElementById('sats-chip');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/me/sats', { headers: authHeaders(), cache: 'no-store' });
+    if (!res.ok) return;
+    const d = await res.json();
+    el.innerHTML = `<span class="sats-num">⚡ ${Number(d.total).toLocaleString('en-US')}</span> sats earned in total`;
+    el.title = `${d.paid} sats paid · ${d.pending} sats waiting for approval`;
+    el.style.display = '';
+  } catch { /* the chip is a nicety; never block studying */ }
 }
 
 // ---------- BTC/ZAR PRICE TICKER ----------
@@ -429,6 +444,7 @@ async function submitReviewAnswer(quizId, selectedIndex) {
       method: 'POST', headers: authHeaders(), body: JSON.stringify({ score_percent: localScore }),
     });
     const completeData = await completeRes.json();
+    refreshSatsChip();
     // The server works out the real score; the browser's own count is only a fallback.
     const scorePercent = typeof completeData.score_percent === 'number' ? completeData.score_percent : localScore;
 
@@ -1122,6 +1138,7 @@ function pgRenderResult(data) {
   const el = document.getElementById('library-content');
   const passed = data.status === 'completed';
   const bookId = pgState.bookId;
+  refreshSatsChip();
   el.innerHTML = `
     <h1 class="dash-title">${passed ? 'Book completed' : 'Not quite yet'}</h1>
     <div class="pg-result ${passed ? 'completed' : 'failed'}">

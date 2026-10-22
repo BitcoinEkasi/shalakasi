@@ -13,6 +13,7 @@ const multer = require('multer');
 const supabase = require('./services/supabase');
 const quizMix = require('./services/quizMix');
 const studyPlan = require('./services/studyPlan');
+const trackerRewards = require('./services/trackerRewards');
 const bookFiles = require('./services/bookStorage');
 const { decideNextStep } = require('./services/aiEngine');
 
@@ -58,6 +59,7 @@ async function createPayoutIfNew(studentId, kind, refId, label, amountSats) {
     student_id: studentId, kind, ref_id: refId, label, amount_sats: amountSats,
   });
   if (error) { console.error('[payouts] could not log reward:', error.message); return null; }
+  trackerRewards.syncUnsent(studentId).catch(() => {}); // hand it to the tracker; if that is down it is retried later
   return { sats: amountSats, status: 'pending' };
 }
 
@@ -287,6 +289,8 @@ app.get('/api/book', requireStudent, async (req, res) => {
 
 // The student's own running total of sats earned (paid + still waiting for approval; rejected ones don't count).
 app.get('/api/me/sats', requireStudent, async (req, res) => {
+  trackerRewards.syncUnsent(req.student.id).catch(() => {});
+  await trackerRewards.refreshStatuses(req.student.id);
   const { data, error } = await supabase.from('payouts').select('amount_sats, status').eq('student_id', req.student.id);
   if (error) return res.status(500).json({ error: 'Could not load sats' });
   let paid = 0, pending = 0;
@@ -1204,12 +1208,13 @@ app.get('/api/admin/payouts', requireAdmin, async (req, res) => {
     .from('payouts')
     .select('id, kind, label, amount_sats, status, note, created_at, decided_at, student_id, students(full_name, username, lightning_address)')
     .order('created_at', { ascending: false })
+    .eq('sent_to_tracker', false) // rewards the tracker has are approved and paid there
     .limit(500);
   if (['pending', 'paid', 'rejected'].includes(status)) q = q.eq('status', status);
   const { data, error } = await q;
   if (error) return res.status(400).json({ error: error.message });
 
-  const { data: pend } = await supabase.from('payouts').select('amount_sats').eq('status', 'pending');
+  const { data: pend } = await supabase.from('payouts').select('amount_sats').eq('status', 'pending').eq('sent_to_tracker', false);
   const pendingSats = (pend || []).reduce((n, r) => n + r.amount_sats, 0);
   res.json({ payouts: data || [], pending_count: (pend || []).length, pending_sats: pendingSats });
 });

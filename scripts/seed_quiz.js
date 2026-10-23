@@ -26,6 +26,10 @@ async function seed() {
       continue;
     }
 
+    // Skip a question that is already there, so running this twice never doubles it.
+    const { data: dup } = await supabase.from('quiz_bank').select('id').eq('section_id', section.id).eq('question', q.question).maybeSingle();
+    if (dup) { console.log(`Already present for ${q.section_number}: "${q.question.slice(0, 50)}..." (skipped)`); continue; }
+
     const { error } = await supabase.from('quiz_bank').insert({
       section_id: section.id,
       question: q.question,

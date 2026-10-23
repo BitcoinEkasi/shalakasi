@@ -1,0 +1,181 @@
+{
+ "_readme": "Approved variant questions for Chapters 1 and 10 (2 per section). Options are kept close in length so the longest option is not a giveaway; the correct option is not systematically longer.",
+ "quizzes": [
+  {
+   "section_number": "1.0",
+   "question": "Before touching Bitcoin at all, which older question does the introduction say we must answer?",
+   "options": [
+    "How do computers store and send information",
+    "Why money exists in the first place",
+    "Which banks keep money the safest"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "1.0",
+   "question": "Over how long does the introduction say you will build up your understanding of money?",
+   "options": [
+    "The next three weeks of classes",
+    "The next twenty weeks of the year",
+    "The next ten weeks of the course"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "1.1",
+   "question": "Which everyday examples does the lesson use to show how much of life runs on money working?",
+   "options": [
+    "The taxi you took, the airtime you bought, money family sends",
+    "Stock market prices, government bond yields and central bank rates",
+    "Gold mining output, oil trading volumes and global shipping costs"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "1.1",
+   "question": "What assumption does the lesson say most people never question?",
+   "options": [
+    "That banks are open and ready to help every weekday",
+    "That prices stay the same from one year to the next",
+    "That money works the way it is supposed to work"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "1.2",
+   "question": "One discussion question compares two currencies in two places. Which one?",
+   "options": [
+    "Why the rand and the dollar are both printed on paper in most countries of the world",
+    "Why the rand is worth something different in Cape Town than the dollar in New York",
+    "Why the dollar can be spent in Cape Town but the rand cannot be spent there"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "1.2",
+   "question": "One discussion question is about our parents. What does it ask?",
+   "options": [
+    "Why they chose to keep their savings at a bank and not at home in a safe place",
+    "Why they prefer buying in shops rather than at the local street markets and stalls",
+    "Why they trade hours of their time for money, not for what they need directly"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.0",
+   "question": "What bigger question does the final chapter step back to ask?",
+   "options": [
+    "How to buy your first bitcoin at the lowest price",
+    "Why any of this actually matters for your life",
+    "Which country adopted Bitcoin first"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.0",
+   "question": "What does the activity before the chapter ask you to imagine?",
+   "options": [
+    "Your school results one year from now, once all of your exams are finished",
+    "Your future job at a big bank in the heart of a busy city centre",
+    "Your own community in five or ten years if Bitcoin adoption kept growing"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.1",
+   "question": "What do supporters of Central Bank Digital Currencies point to?",
+   "options": [
+    "Complete privacy for every single transaction made by the public",
+    "Removing central banks from the financial system entirely",
+    "Efficiency and financial inclusion for the unbanked"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.1",
+   "question": "How does the section say we should treat the supporters' and the critics' concerns?",
+   "options": [
+    "Take both seriously rather than dismissing either side",
+    "Accept the supporters' view and set the critics' concerns aside",
+    "Reject every digital currency that a government may issue"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.2",
+   "question": "Which of these is named as a real tension in this discussion?",
+   "options": [
+    "Financial privacy versus faster payments for every customer",
+    "Financial privacy versus lower bank fees for small customers",
+    "Financial privacy versus fighting crime and tax evasion"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.2",
+   "question": "What is the central question of this class discussion?",
+   "options": [
+    "Which country has the strongest central bank",
+    "Do you have the right to control your own money",
+    "How many bitcoin each person should own"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.3",
+   "question": "What does the section say about Bitcoin's supply?",
+   "options": [
+    "A committee adjusts the supply every year so that it matches what people demand",
+    "The largest mining companies decide how much of it will exist in future",
+    "It is fixed and verifiable, so no institution can quietly inflate it away"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.3",
+   "question": "Where does the section point to real-world usability that is more than a distant idea?",
+   "options": [
+    "A payment system run by the national central bank",
+    "Our own EkasiPay merchant network",
+    "Bitcoin ATMs in every large shopping mall"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.4",
+   "question": "According to the section, how do most people think about money when they start the course?",
+   "options": [
+    "As something fixed and given, just how things are",
+    "As something only banks and governments are able to understand",
+    "As a tool that will soon disappear completely from daily life"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "10.4",
+   "question": "Who does the section say to talk to about your certificate and what comes next?",
+   "options": [
+    "The manager of your nearest bank branch in town",
+    "Sassa, including about the Postgraduate track",
+    "The company that made your phone or your wallet app"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  }
+ ]
+}

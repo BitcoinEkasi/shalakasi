@@ -1,0 +1,837 @@
+{
+ "_readme": "Rewrites of the existing questions so the right answer is not the longest or most detailed option. Each entry finds the stored question by section_number + match_question and replaces its options (and the question text where it is given). The correct position is spread evenly in storage; the app also shuffles the order per student.",
+ "updates": [
+  {
+   "section_number": "1.0",
+   "match_question": "Who — or what — is ShalaKasi, as introduced in this section?",
+   "options": [
+    "Chapters 1 through 5",
+    "Chapters 1 through 3",
+    "Chapters 3 through 8"
+   ],
+   "correct_index": 0,
+   "question": "According to the introduction, which chapters are entirely about money rather than Bitcoin?"
+  },
+  {
+   "section_number": "1.1",
+   "match_question": "What does ShalaKasi say it will help with throughout the Diploma?",
+   "options": [
+    "The engine room of the whole economy",
+    "The nervous system of the economy",
+    "The bloodstream of the economy"
+   ],
+   "correct_index": 1,
+   "question": "In the thought experiment, what is money described as being closer to than a simple convenience?"
+  },
+  {
+   "section_number": "1.2",
+   "match_question": "What is the actual goal of this class discussion, according to the section itself?",
+   "options": [
+    "To reach agreement on one correct definition of what money is",
+    "To work out which currency is the strongest in the world",
+    "To notice that money is more designed than it first appears"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "2.0",
+   "match_question": "What question does this section say we're going 'one level deeper' into, compared to Chapter 1?",
+   "options": [
+    "What money actually is",
+    "Why money is necessary",
+    "How money gets created"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "2.1",
+   "match_question": "Which of these best explains why cattle worked as money in early societies?",
+   "options": [
+    "Cattle were issued and guaranteed by a central authority of the time",
+    "Cattle were widely recognised and trusted as valuable by the community",
+    "Cattle could be split into very small amounts to pay for small things"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "2.2",
+   "match_question": "Which of the following is NOT one of the three jobs money does, according to this section?",
+   "options": [
+    "Medium of exchange",
+    "Unit of account",
+    "Source of employment"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "2.3",
+   "match_question": "A form of money that is easy to carry and divide into small amounts is described as having which property?",
+   "options": [
+    "Portability and divisibility",
+    "Scarcity and durability",
+    "Acceptability and trust"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "2.3",
+   "match_question": "If a currency loses half its purchasing power over ten years, which property of good money has weakened?",
+   "options": [
+    "Divisibility",
+    "Store of value",
+    "Portability"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "2.4",
+   "match_question": "What distinguishes 'representative money' from 'commodity money'?",
+   "options": [
+    "Representative money gets its value from the material it is physically made of",
+    "Representative money has no backing and only works because a government says so",
+    "Representative money is a claim on a commodity held elsewhere, not valuable in itself"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "2.5",
+   "match_question": "According to this section, what does money that reliably holds its value tend to encourage?",
+   "options": [
+    "Saving and long-term thinking, since patience is not punished",
+    "Spending quickly, since waiting only makes your money less useful",
+    "Borrowing heavily, since debts become cheaper to pay back"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "3.0",
+   "match_question": "What is this chapter's overall path, as described in the introduction?",
+   "options": [
+    "From the first Bitcoin transaction to the first bank card",
+    "From direct trade to the card or app you use today",
+    "From gold mining to the creation of the first central bank"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "3.1",
+   "match_question": "What specific problem does barter run into that early forms of money were invented to solve?",
+   "options": [
+    "The problem of counterfeiting: traders could never tell fake goods from real",
+    "The tax problem: traders had to pay a share of every swap to the ruler",
+    "The double coincidence of wants: both people must want what the other has"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "3.1.1",
+   "match_question": "Why did shells sometimes fail as a form of early money?",
+   "options": [
+    "They were found too easily nearby, which weakened their scarcity",
+    "They were too heavy and bulky to carry when travelling to trade",
+    "They rotted quickly, so they could not be stored for long periods"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "3.1.2",
+   "match_question": "What made metal coinage a major improvement over earlier forms of money like cattle or grain?",
+   "options": [
+    "It was easy for anyone to make, so everyone could have plenty",
+    "It was durable, divisible into smaller units, and relatively scarce",
+    "It was accepted only inside a single village and nowhere else"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "3.1.3",
+   "match_question": "What changed when money stopped being 'sound' and became backed only by government decree?",
+   "options": [
+    "Money became more valuable because the government printed less of it",
+    "Money was replaced by barter in most everyday shops and markets",
+    "Money went from a claim on a scarce asset to a claim on public trust"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "3.1.4",
+   "match_question": "What tradeoff does this section highlight in the shift from cash to cards and phone-based money?",
+   "options": [
+    "Access to your own money now depends on a bank's systems and permission",
+    "Cards cost more to produce than paper notes, so shops charge extra fees",
+    "Digital money can only be spent in the same shop where you first got it"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "3.2",
+   "match_question": "What's actually new about the kind of digital currency Bitcoin represents, compared to digital bank ledgers that already existed?",
+   "options": [
+    "A faster way for banks to move digital money between each other",
+    "Digital money that no single company or government issues or controls",
+    "A digital version of the rand issued by the national central bank"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "4.0",
+   "match_question": "What does the word 'fiat' mean, as explained in this section?",
+   "options": [
+    "Roughly 'backed by gold' in Latin, a promise",
+    "Roughly 'for the people' in Latin, a public vote",
+    "Roughly 'let it be done' in Latin, a decree"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "4.1",
+   "match_question": "What happened in 1971 that's significant to this chapter?",
+   "options": [
+    "The US formally ended the dollar's convertibility to gold",
+    "The US government began printing the first paper dollars",
+    "Central banks around the world all agreed to return to gold"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "4.2",
+   "match_question": "What institutions typically hold the authority to create new money in a fiat system?",
+   "options": [
+    "Individual citizens, through a yearly national vote",
+    "A central bank working with the government treasury",
+    "Any registered business that applies for a licence"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "4.2.1",
+   "match_question": "What determines the money supply in a fiat system, according to this section?",
+   "options": [
+    "A fixed formula set once that nobody can change",
+    "The total weight of gold held in national reserves",
+    "Policy decisions made by central banking institutions"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "4.2.2",
+   "match_question": "Under fractional reserve banking, what happens to most of a bank deposit?",
+   "options": [
+    "It is lent out, re-deposited and lent out again, multiplying the money",
+    "It stays in the bank's vault, ready for the customer to withdraw",
+    "It is passed to the government, which spends it on public services"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "4.2.3",
+   "match_question": "The 'Cantillon effect' referred to in this section describes:",
+   "options": [
+    "A rule limiting how much money a government may print each year",
+    "An advantage for whoever receives new money first, before prices rise",
+    "A method that lets banks swap fiat currency for gold on demand"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "4.3",
+   "match_question": "How does a CBDC differ from the digital money most people already use today?",
+   "options": [
+    "It would be created by a commercial bank for its own customers",
+    "It would be mined by computers across a decentralised network",
+    "It would be issued directly by the central bank itself"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "5.0",
+   "match_question": "According to this section, where do the effects of the fiat system actually show up?",
+   "options": [
+    "In everyday things like taxi fares or a stokvel payout buying less",
+    "Mostly in government reports and economic textbooks, not daily life",
+    "Mainly in the price of imported luxury goods, not daily items"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "5.1",
+   "match_question": "Why doesn't inflation affect everyone equally?",
+   "options": [
+    "It mainly hurts people who spend more than they earn each month",
+    "Those who get new money first gain before prices rise; savers lose",
+    "It affects everyone equally, because prices rise for all shoppers"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "5.1.1",
+   "match_question": "In the example given, what happens to a R100 grocery basket after two years of 10% annual inflation?",
+   "options": [
+    "It costs R120",
+    "It costs R110",
+    "It costs R121"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "5.2",
+   "match_question": "What two connected problems does this section say compound the effects of inflation?",
+   "options": [
+    "Growing debt at every level of the economy and a widening wealth gap",
+    "Rising unemployment and falling school attendance in poor areas",
+    "Higher taxes together with a shrinking number of bank branches"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "5.2.1",
+   "match_question": "Why can't people who don't own appreciating assets protect their savings from inflation, according to this section?",
+   "options": [
+    "Working extra hours lets them keep up with rising prices easily",
+    "Money saved in cash or a normal account quietly loses value yearly",
+    "Bank interest on savings accounts is fixed by law to match inflation"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "5.2.2",
+   "match_question": "According to this section, why does wealth inequality tend to widen under ongoing inflation?",
+   "options": [
+    "People with lower incomes usually spend their money less wisely than others",
+    "Inflation is a deliberate government policy meant to punish people who own assets",
+    "Asset owners gain as asset prices rise with the money supply while wages lag"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "5.2.3",
+   "match_question": "How do many governments service large, growing debt loads, according to this section?",
+   "options": [
+    "Often by creating more currency, which feeds back into inflation",
+    "By paying it off in full within a year using extra tax income",
+    "By asking banks to cancel it whenever the debt becomes too large"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "5.3",
+   "match_question": "What core question did the community described in this section start asking?",
+   "options": [
+    "How could banks be made safer, so that fewer of them ever fail?",
+    "Could money be redesigned so no single body holds so much power?",
+    "Should governments print less money so the rand can regain its value?"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "5.3.1",
+   "match_question": "What did the Cypherpunks argue was required for privacy and financial freedom in the digital age?",
+   "options": [
+    "Close government oversight, so every transaction can be checked",
+    "A return to physical cash, since nothing digital can ever be private",
+    "Strong cryptography, so privacy does not rely on trusting a bank"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "5.3.2",
+   "match_question": "What is the key difference between a centralized and a decentralized system, as described here?",
+   "options": [
+    "Centralized: one party decides. Decentralized: many independent participants share the decisions",
+    "Centralized systems are run by governments, while decentralized systems are run by private banks",
+    "Centralized systems use paper records, while decentralized systems use only digital records"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "5.3.3",
+   "match_question": "What problem did earlier attempts at digital cash (before Bitcoin) fail to solve without relying on a trusted central party?",
+   "options": [
+    "The speed problem: moving digital cash fast enough for daily shopping",
+    "The double-spend problem: the same digital money being spent twice",
+    "The design problem: digital cash never looked trustworthy to users"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "6.0",
+   "match_question": "Under what name was the Bitcoin whitepaper published in October 2008?",
+   "options": [
+    "The Bitcoin Foundation, a company whose founders are publicly known",
+    "The Cypherpunk Collective, a group of banks that funded Bitcoin",
+    "Satoshi Nakamoto, a pseudonym; the real identity is still unknown"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "6.1",
+   "match_question": "How does Bitcoin's blockchain differ from a traditional bank's ledger?",
+   "options": [
+    "Many independent computers hold identical copies and agree on updates together",
+    "A single government-appointed company keeps the official copy for everyone",
+    "Each user keeps a private copy that no other computer is allowed to check"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "6.1.1",
+   "match_question": "What is Proof-of-Work used for in Bitcoin?",
+   "options": [
+    "It lets one trusted company approve every payment before anyone else sees it",
+    "It makes cheating expensive and checking cheap, so strangers can agree on history",
+    "It encrypts messages between users so that only the receiver can read them"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "6.1.2",
+   "match_question": "Which group is responsible for independently verifying that Bitcoin's rules are being followed?",
+   "options": [
+    "Miners only",
+    "Central banks",
+    "Full nodes"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "6.2",
+   "match_question": "What question does this section ask directly, building on Chapter 2?",
+   "options": [
+    "Does Bitcoin actually have the properties of good money?",
+    "Is gold still better than Bitcoin in every possible way?",
+    "Should governments be allowed to ban Bitcoin completely?"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "6.2.1",
+   "match_question": "How was Bitcoin's design approach to sound-money properties different from gold's?",
+   "options": [
+    "Bitcoin copied gold's design exactly and simply made it digital instead of physical",
+    "Bitcoin was built from scratch to have those properties, learning from older money",
+    "Bitcoin was designed by a bank to improve on the properties of paper money"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "6.2.2",
+   "match_question": "What enforces Bitcoin's maximum supply of 21 million coins?",
+   "options": [
+    "A public promise made by Bitcoin's creator when the network first launched",
+    "A vote held every four years among the largest mining companies in the world",
+    "The software rules that every participant independently runs and verifies"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "6.2.3",
+   "match_question": "What tradeoff does this section highlight as often underestimated by new Bitcoin users?",
+   "options": [
+    "With no bank to fix your mistakes, you carry more personal responsibility",
+    "Transactions can take several days to confirm, even for small amounts",
+    "Bitcoin cannot be used for small purchases, only for large payments"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "7.0",
+   "match_question": "What does this chapter promise you'll actually do, not just read about?",
+   "options": [
+    "Mine a Bitcoin block on your own computer",
+    "Set up a wallet and send a real transaction",
+    "Write a small program that creates new coins"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "7.1",
+   "match_question": "What is the main tradeoff to weigh across the three ways of acquiring bitcoin covered in this section?",
+   "options": [
+    "Interest earned, bank fees, and how long a loan takes",
+    "Mining power, electricity cost, and the size of your wallet file",
+    "Speed, privacy, and how much you must trust a third party"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "7.1.1",
+   "match_question": "Why might physical peer-to-peer trading be an accessible entry point in a community like Ekasi?",
+   "options": [
+    "It needs no bank account or ID checks from a distant company",
+    "It is the only legal route to acquire bitcoin in South Africa",
+    "It needs an account at a large exchange before you can start"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "7.1.2",
+   "match_question": "What protects both sides during an online peer-to-peer bitcoin trade?",
+   "options": [
+    "A bank guarantee",
+    "An escrow service",
+    "A government licence"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "7.1.3",
+   "match_question": "What's the key tradeoff when buying bitcoin through a centralized exchange?",
+   "options": [
+    "It is usually the cheapest option, but you must first run your own full node",
+    "It keeps your identity private, but it only works for very large purchases",
+    "It is often the simplest start, but you trust the exchange with your ID and funds"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "7.2",
+   "match_question": "What does a Bitcoin wallet actually hold, according to this section?",
+   "options": [
+    "The private keys that prove you control your bitcoin",
+    "The coins themselves, stored safely inside the app on your phone",
+    "A complete copy of the blockchain that the app keeps up to date"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "7.2.1",
+   "match_question": "What does 'not your keys, not your coins' mean?",
+   "options": [
+    "You should never write down your recovery phrase, even on paper at home",
+    "If a company holds your private keys, you do not truly control that bitcoin",
+    "A bitcoin wallet needs a physical key that you keep locked away at home"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "7.2.2",
+   "match_question": "What's the main difference between on-chain and Lightning wallets?",
+   "options": [
+    "On-chain wallets are for small daily spending; Lightning wallets are for storing savings safely over many years",
+    "On-chain wallets need a bank account to open, while Lightning wallets can be opened without one",
+    "On-chain wallets use the main blockchain, best for savings; Lightning wallets use a faster layer for spending"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "7.2.3",
+   "match_question": "Why does open-source wallet software matter, according to this section?",
+   "options": [
+    "The code is public, so anyone can inspect it rather than trust the developer",
+    "Open-source wallets are guaranteed to be faster than any other kind of wallet",
+    "Open-source wallets are approved and insured by the banks that sponsor them"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "7.3",
+   "match_question": "Why should a wallet recovery phrase never be stored as a screenshot or phone note?",
+   "options": [
+    "Screenshots take up a lot of storage space and can slow down the whole phone",
+    "It is the master key to your funds, and a digital copy is easy to steal",
+    "A recovery phrase stops working if it is stored on a phone for 30 days"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "7.4",
+   "match_question": "Why does this section stress double-checking an address before sending bitcoin?",
+   "options": [
+    "Addresses expire after a few minutes, so a slow check could make you lose coins",
+    "The network automatically rejects a wrong address and returns the coins to you",
+    "Transactions are irreversible, so there is no bank to call to undo a mistake"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "7.5",
+   "match_question": "Why does this section stress that saving in bitcoin isn't risk-free?",
+   "options": [
+    "Its price is volatile in the short term, even if many hold it for the long term",
+    "Bitcoin pays no interest, so the amount you hold shrinks a little every month",
+    "Banks are allowed to freeze any wallet that holds more than a few thousand rand"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "7.6",
+   "match_question": "What does 'Don't Trust, Verify' mean in practice, according to this section?",
+   "options": [
+    "Never using any Bitcoin wallet until a government agency has officially approved it",
+    "Checking claims yourself, with block explorers and code, instead of trusting one source",
+    "Trusting only official statements from Bitcoin Ekasi, since they know the course best"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "8.0",
+   "match_question": "Why was the Lightning Network built on top of Bitcoin, according to this section?",
+   "options": [
+    "To replace Bitcoin's blockchain so the original network could be switched off",
+    "To make large payments more expensive so that miners earn higher fees",
+    "To make small, fast, cheap everyday payments practical on top of Bitcoin"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "8.1",
+   "match_question": "What actually touches the base Bitcoin blockchain in a typical Lightning transaction?",
+   "options": [
+    "Only the opening and closing of the channel; payments inside it happen off-chain",
+    "Every single payment sent through the channel, each recorded in a separate block",
+    "Nothing at all, because Lightning runs completely separately from Bitcoin"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "8.2",
+   "match_question": "What determines the different 'flavors' of Lightning wallets, according to this section?",
+   "options": [
+    "Which country's central bank first approved the app",
+    "Who holds the keys and who manages the channels",
+    "How many people have already downloaded the wallet"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "8.2.1",
+   "match_question": "What's the tradeoff of a custodial Lightning wallet, compared to self-custodial?",
+   "options": [
+    "It is cheaper to run, but payments are slower than on self-custodial wallets",
+    "It can only be used for online purchases, so you cannot pay in person at a shop",
+    "It is simpler to use, but you trust the provider with your channels and keys"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "8.2.2",
+   "match_question": "What does open-source Lightning wallet software allow, same as in Chapter 7?",
+   "options": [
+    "The community can verify the code really does what it claims",
+    "It removes the need for any wallet app at all on your phone",
+    "It guarantees that the wallet can never be hacked or lose funds"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "8.3",
+   "match_question": "Why might someone start with a custodial Lightning wallet before moving to self-custody?",
+   "options": [
+    "Self-custodial wallets are only allowed for users who already have a bank account",
+    "Custodial wallets are simpler, while self-custody means managing channels and backups",
+    "Custodial wallets pay interest on every deposit, while self-custodial ones pay none"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "8.4",
+   "match_question": "What is a Lightning 'invoice'?",
+   "options": [
+    "A monthly statement showing every payment made with the wallet",
+    "A receipt that the sender gets after the payment is complete",
+    "A QR code made by the receiver that the sender scans to pay"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "8.5",
+   "match_question": "What does this section say Lightning's speed and low fees make practical?",
+   "options": [
+    "Genuine everyday spending, like buying coffee or groceries",
+    "Large transfers between big businesses and their suppliers",
+    "Long-term saving, like keeping money untouched for many years"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "8.5.1",
+   "match_question": "What advantage does a Lightning payment plugin give an online merchant, according to this section?",
+   "options": [
+    "A guaranteed tax exemption on every single sale",
+    "Near-instant payment with no chargeback risk",
+    "Free marketing from the payment processor"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "8.5.2",
+   "match_question": "How many merchants does Bitcoin Ekasi's EkasiPay network cover across Mossel Bay, according to this section?",
+   "options": [
+    "85",
+    "95",
+    "65"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "8.5.3",
+   "match_question": "What role do Bitcoin-linked gift cards and prepaid cards play, according to this section?",
+   "options": [
+    "A bridge for people still getting comfortable with using Lightning directly",
+    "They are meant to replace Lightning wallets for people who own a smartphone",
+    "They can only be used outside South Africa, never in shops in Mossel Bay"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "8.5.4",
+   "match_question": "What is a 'circular economy' in the context of this section?",
+   "options": [
+    "An economy where all money moves in a circle between the government and banks",
+    "Bitcoin earned locally is also spent locally, not converted straight back to rand",
+    "An economy where every business accepts payment in a different local currency"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "9.0",
+   "match_question": "Does this chapter require you to become a programmer, according to its introduction?",
+   "options": [
+    "Yes, every student must learn some coding before the chapter can be passed",
+    "Only for students who plan to run their own mining machines at home",
+    "No, but knowing how it works makes you a more confident, self-reliant user"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "9.1",
+   "match_question": "What does the pairing of public and private keys make possible, according to this section?",
+   "options": [
+    "Self-custody without needing a central authority to verify who owns what",
+    "Free transactions that never need to be confirmed by anyone on the network",
+    "Automatic recovery of a wallet whenever the phone is lost or stolen"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "9.1.1",
+   "match_question": "Why is it safe to share your public key with anyone?",
+   "options": [
+    "The private key can only be worked out from the public key using special software",
+    "Making a public key from a private key is easy, but reversing it is infeasible",
+    "Public keys expire after 24 hours, so sharing one never puts your bitcoin at risk"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "9.1.2",
+   "match_question": "What property of hash functions makes Bitcoin's blockchain tamper-evident?",
+   "options": [
+    "Hashes can be reversed to reveal the original transaction, so tampering is easy to spot",
+    "Each block's hash is picked by the miner who made it, so old ones are easy to edit",
+    "Any tiny change gives a totally different hash, so edits to the past break the chain"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "9.2",
+   "match_question": "How is the UTXO model different from a traditional bank account balance?",
+   "options": [
+    "It tracks ownership as separate unspent outputs, like notes, not a single total",
+    "It limits each wallet to one transaction per day, which keeps the network small",
+    "It needs a bank to approve every unspent output before it can be created"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "9.3",
+   "match_question": "What is the key difference between a node and a miner, according to this section?",
+   "options": [
+    "They are the same thing, and the name only changes with the wallet you use",
+    "Nodes check the rules; miners propose new blocks. They are separate roles",
+    "Only miners may hold bitcoin, while nodes only keep a copy of old blocks"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "9.3.1",
+   "match_question": "Why does running your own full node matter, according to this section?",
+   "options": [
+    "It is required by the network before you can send any transaction at all, even a small one",
+    "It guarantees you will earn bitcoin, because full nodes are picked to mine the next block",
+    "It lets you check every transaction and block against the rules without trusting anyone"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "9.3.2",
+   "match_question": "What happens to Bitcoin's mining difficulty roughly every two weeks?",
+   "options": [
+    "It adjusts automatically to keep new blocks arriving about every 10 minutes",
+    "It resets to zero so that every miner has to start again from the first block",
+    "It is set by a vote among miners, who choose how hard the next two weeks will be"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "9.4",
+   "match_question": "What is the mempool?",
+   "options": [
+    "A backup copy of the entire blockchain that every wallet app keeps for safety",
+    "A holding area for pending transactions that are waiting to be added to a block",
+    "The special wallet where miners store all the bitcoin they earn from mining"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "9.5",
+   "match_question": "According to this section, what must happen before a block is accepted into the blockchain?",
+   "options": [
+    "Only the miner who created it has to approve the block's content",
+    "A central authority has to sign off on the block before it counts",
+    "Every node independently checks that the block follows every rule"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "10.0",
+   "match_question": "What bigger question has the whole Diploma been building toward, according to this closing chapter's introduction?",
+   "options": [
+    "Why any of this actually matters for your own life",
+    "How to explain the Bitcoin whitepaper to a bank manager",
+    "Which Bitcoin wallet brand is the best one for beginners"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "10.1",
+   "match_question": "What is a key concern critics raise about Central Bank Digital Currencies (CBDCs)?",
+   "options": [
+    "They would make everyday payments slower and costlier than using cash",
+    "A government could see every transaction and have the power to freeze funds",
+    "They could not be used for payments between different countries at all"
+   ],
+   "correct_index": 1
+  },
+  {
+   "section_number": "10.2",
+   "match_question": "According to this section, what does Bitcoin do to the real tensions around control of money (privacy vs. crime-fighting, control vs. safety nets)?",
+   "options": [
+    "It removes every one of them, because no authority is left to disagree",
+    "It makes the tensions worse, because nobody is left to manage them",
+    "It shifts who is responsible for handling them, rather than resolving them"
+   ],
+   "correct_index": 2
+  },
+  {
+   "section_number": "10.3",
+   "match_question": "According to this section, what is the honest framing of Bitcoin's benefits?",
+   "options": [
+    "The benefits are real but so are the tradeoffs; the case is that many find them worth taking",
+    "Bitcoin carries no real risk, and the tradeoffs mentioned are mostly invented by critics",
+    "Its main benefit is that the price tends to rise over time, and nothing else matters"
+   ],
+   "correct_index": 0
+  },
+  {
+   "section_number": "10.4",
+   "match_question": "According to this closing section, what was the actual outcome this Diploma was built to create?",
+   "options": [
+    "Being able to read and explain every line of Bitcoin's source code by yourself",
+    "A shift in perspective: seeing that money could work differently",
+    "Passing a long final written exam and earning the highest mark in your class"
+   ],
+   "correct_index": 1
+  }
+ ]
+}

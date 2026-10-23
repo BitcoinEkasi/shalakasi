@@ -96,3 +96,13 @@ probably the sections where students will lean on Satoshi's chat the
 most, so getting solid grounding text in early is worth prioritizing
 over the more practical "how-to" chapters (7-9), which can lean more on
 step-by-step instructions than deep explanation anyway.
+
+## Writing quiz questions that cannot be guessed
+
+Kids learn quickly that the right answer is often the longest or the most carefully worded one. Keep it fair:
+
+- Write the three options so they have about the same length and the same shape (all full sentences, or all short phrases).
+- Wrong options must sound believable to someone who did not read the section. A joke answer or "nothing / never / only" gives the game away.
+- Do not put the right answer first or last on purpose. The app shuffles the order for every student, so position does not matter.
+- Before adding a batch, run `node scripts/check_quiz_bias.js`. It says "OK" when the right answer is the longest roughly a third of the time.
+- To replace the options of questions that already exist, use `node scripts/apply_rebalance.js <file>` with a file shaped like `data/quiz_bank_rebalanced.json`.

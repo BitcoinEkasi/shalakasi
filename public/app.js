@@ -257,7 +257,7 @@ function renderCertificate(chapters) {
         <div class="cert-top-bar"></div>
         <div class="cert-block-label">BLOCK — BITCOIN DIPLOMA GRADUATE</div>
         <div class="cert-name">${escapeHtmlDash(student.full_name)}</div>
-        <div class="cert-sub">has completed the Stack &amp; Study Bitcoin Diploma</div>
+        <div class="cert-sub">has completed the Study &amp; Stack Bitcoin Diploma</div>
 
         <div class="cert-stats">
           <div class="cert-stat"><div class="cert-stat-value">${chaptersPassed}/${totalChapters}</div><div class="cert-stat-label">Chapters mastered</div></div>
@@ -889,7 +889,7 @@ async function loadDashboard() {
 
   el.innerHTML = `
     <h1 class="dash-title">${student.full_name}'s progress</h1>
-    <p class="dash-sub">${masteredSections} of ${totalSections} sections mastered · Stack &amp; Study is building this path as you go, not following a fixed order.</p>
+    <p class="dash-sub">${masteredSections} of ${totalSections} sections mastered · Study &amp; Stack is building this path as you go, not following a fixed order.</p>
     <div class="sats-earned-card">
       <div class="sats-earned-icon">⚡</div>
       <div>

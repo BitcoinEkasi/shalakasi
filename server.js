@@ -1,4 +1,4 @@
-// server.js — Stack & Study backend
+// server.js — Study & Stack backend
 require('dotenv').config();
 
 const express = require('express');
@@ -1247,4 +1247,4 @@ app.patch('/api/admin/students/:id/lightning-address', requireAdmin, async (req,
 });
 
 const PORT = process.env.PORT || 3300;
-app.listen(PORT, () => console.log(`Stack & Study running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Study & Stack running on http://localhost:${PORT}`));

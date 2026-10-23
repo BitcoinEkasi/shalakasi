@@ -1,4 +1,4 @@
-# Moving Stack & Study from Supabase to your own database
+# Moving Study & Stack from Supabase to your own database
 
 Everything runs on your Mynymbox server. Supabase is **never changed** — it stays as your safety net.
 All commands below are run **on the server** (`root@ekasi-server`), from the app folder:

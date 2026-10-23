@@ -1,7 +1,7 @@
 {
   "name": "shalakasi-backend",
   "version": "0.1.0",
-  "description": "Stack & Study \u2014 adaptive Bitcoin Diploma platform backend",
+  "description": "Study & Stack \u2014 adaptive Bitcoin Diploma platform backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

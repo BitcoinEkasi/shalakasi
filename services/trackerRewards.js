@@ -1,4 +1,4 @@
-// services/trackerRewards.js — hands Stack & Study rewards to the Attendance Tracker, which approves and pays them
+// services/trackerRewards.js — hands Study & Stack rewards to the Attendance Tracker, which approves and pays them
 // together with the attendance sats, and asks it back whether each one has been paid.
 // Does nothing unless TRACKER_URL and TRACKER_KEY are set. Every call is safe to repeat: the tracker ignores a reward it already has.
 const supabase = require('./supabase');

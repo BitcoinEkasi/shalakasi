@@ -1,4 +1,4 @@
-# Stack & Study
+# Study & Stack
 
 **My First Bitcoin Diploma — Powered by Bitcoin Ekasi**
 

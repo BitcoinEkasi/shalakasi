@@ -68,4 +68,20 @@ function toDisplayedIndex(studentId, quizId, n, originalCorrect, round = 0) {
   return optionOrder(studentId, quizId, n, round).indexOf(originalCorrect);
 }
 
-module.exports = { optionOrder, pickPerSection, orderQuestions, presentQuestion, toOriginalIndex, toDisplayedIndex };
+// A longer pick for chapter tests: up to `perSection` questions from each section, a different pick for each student and round.
+function pickQuestions(studentId, questions, perSection, round = 0) {
+  const bySection = new Map();
+  for (const q of questions || []) {
+    if (!bySection.has(q.section_id)) bySection.set(q.section_id, []);
+    bySection.get(q.section_id).push(q);
+  }
+  const picked = [];
+  for (const [sectionId, list] of bySection) {
+    list.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const order = shuffledIndexes(list.length, 'test', studentId, sectionId, round);
+    for (const i of order.slice(0, perSection)) picked.push(list[i]);
+  }
+  return picked;
+}
+
+module.exports = { optionOrder, pickPerSection, pickQuestions, orderQuestions, presentQuestion, toOriginalIndex, toDisplayedIndex };

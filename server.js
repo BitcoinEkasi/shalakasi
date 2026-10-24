@@ -42,7 +42,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
 const JWT_SECRET = process.env.JWT_SECRET || 'shalakasi-dev-secret-change-me';
 const MASTERY_THRESHOLD = 0.75;
 const POSTGRAD_MASTERY_THRESHOLD = 0.75;
-const REVIEW_PASS_PERCENT = 70;
+const REVIEW_PASS_PERCENT = parseInt(process.env.REVIEW_PASS_PERCENT, 10) || 60;
+const REVIEW_PER_SECTION = parseInt(process.env.REVIEW_PER_SECTION, 10) || 2; // chapter test: up to this many questions from each section
+const REVIEW_RETAKE_HOURS = process.env.REVIEW_RETAKE_HOURS !== undefined && process.env.REVIEW_RETAKE_HOURS !== '' ? Number(process.env.REVIEW_RETAKE_HOURS) : 24;
 // Sats rewards for progress (pending until an admin approves them).
 const CHAPTER_PASS_SATS = parseInt(process.env.CHAPTER_PASS_SATS, 10) || 500;
 const BOOK_PASS_SATS = parseInt(process.env.BOOK_PASS_SATS, 10) || 1000;
@@ -346,6 +348,19 @@ async function earlierSectionsDone(studentId, sectionId) {
   return { ok: false };
 }
 
+// Every earlier chapter's test must be passed before a section of a later chapter can be started.
+async function earlierChaptersPassed(studentId, chapterId) {
+  const [{ data: chapters }, { data: reviews }] = await Promise.all([
+    supabase.from('chapters').select('id, number, sort_order'),
+    supabase.from('chapter_reviews').select('chapter_id, passed').eq('student_id', studentId),
+  ]);
+  const here = (chapters || []).find((c) => c.id === chapterId);
+  if (!here) return { ok: true };
+  const passed = new Set((reviews || []).filter((r) => r.passed).map((r) => r.chapter_id));
+  const missing = (chapters || []).filter((c) => c.sort_order < here.sort_order && !passed.has(c.id)).sort((a, b) => a.sort_order - b.sort_order)[0];
+  return missing ? { ok: false, chapter: missing.number } : { ok: true };
+}
+
 // Has this student had a fair time with the section? Returns seconds still to wait (0 = fine, -1 = never opened).
 async function readingTimeLeft(studentId, section, quizIds) {
   if (ANTICHEAT_OFF) return 0;
@@ -390,6 +405,10 @@ app.get('/api/sections/:id', requireStudent, async (req, res) => {
     const order = await earlierSectionsDone(req.student.id, section.id);
     if (!order.ok) {
       return res.status(403).json({ error: 'out_of_order', message: order.blocking ? `Finish section ${order.blocking} first.` : 'Finish the earlier sections first.' });
+    }
+    const prior = await earlierChaptersPassed(req.student.id, section.chapter_id);
+    if (!prior.ok) {
+      return res.status(403).json({ error: 'out_of_order', message: `Pass the Chapter ${prior.chapter} test first.` });
     }
     const pace = await getPace(req.student.id);
     if (pace.blocked) {
@@ -483,7 +502,7 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
 
   // One question per section for this student, in their own order, answers shuffled.
   const round = await reviewRound(req.student.id, chapter.id);
-  const mine = quizMix.orderQuestions(req.student.id, quizMix.pickPerSection(req.student.id, questions || [], round), round);
+  const mine = quizMix.orderQuestions(req.student.id, quizMix.pickQuestions(req.student.id, questions || [], REVIEW_PER_SECTION, round), round);
   const shaped = mine.map((q) => ({
     id: q.id,
     question: q.question,
@@ -491,10 +510,19 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
     section_number: q.sections?.number,
   }));
 
+  // After a fail the student waits before trying again, so the test cannot be learned by answering it over and over.
+  const { data: lastTry } = await supabase.from('chapter_reviews').select('passed, completed_at').eq('student_id', req.student.id).eq('chapter_id', chapter.id).maybeSingle();
+  if (lastTry && !lastTry.passed && REVIEW_RETAKE_HOURS > 0 && lastTry.completed_at) {
+    const opens = new Date(new Date(lastTry.completed_at).getTime() + REVIEW_RETAKE_HOURS * 3600 * 1000);
+    if (opens.getTime() > Date.now()) {
+      return res.status(403).json({ error: 'retake_wait', retake_at: opens.toISOString(), pass_percent: REVIEW_PASS_PERCENT, message: 'Have another look at the sections you were less sure of. You can try the test again later.' });
+    }
+  }
+
   // Opening the review starts a fresh attempt: forget earlier recorded answers.
   await supabase.from('review_answers').delete().eq('student_id', req.student.id).eq('chapter_id', chapter.id);
 
-  res.json({ chapter: { id: chapter.id, number: chapter.number, title: chapter.title }, questions: shaped });
+  res.json({ chapter: { id: chapter.id, number: chapter.number, title: chapter.title }, questions: shaped, pass_percent: REVIEW_PASS_PERCENT });
 });
 
 // Grades one question at a time, stateless — no DB write here. This
@@ -512,7 +540,7 @@ app.post('/api/chapters/:id/review/answer', requireStudent, async (req, res) => 
   }
   const round = await reviewRound(req.student.id, req.params.id);
   const { data: allQs } = await supabase.from('quiz_bank').select('id, section_id, sections!inner(chapter_id)').eq('sections.chapter_id', req.params.id);
-  if (!quizMix.pickPerSection(req.student.id, allQs || [], round).some((q) => q.id === quizId)) {
+  if (!quizMix.pickQuestions(req.student.id, allQs || [], REVIEW_PER_SECTION, round).some((q) => q.id === quizId)) {
     return res.status(404).json({ error: 'Question not found' });
   }
   const optCount = (quizItem.options || []).length;
@@ -550,7 +578,7 @@ app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) =
   const sectionIds = (sections || []).map((s) => s.id);
   const { data: questions } = await supabase.from('quiz_bank').select('id, section_id').in('section_id', sectionIds);
   const round = await reviewRound(req.student.id, chapterId);
-  const total = quizMix.pickPerSection(req.student.id, questions || [], round).length;
+  const total = quizMix.pickQuestions(req.student.id, questions || [], REVIEW_PER_SECTION, round).length;
 
   let score_percent = 100; // a chapter with no review questions passes, with no reward
   if (total > 0) {
@@ -585,7 +613,8 @@ app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) =
     );
   }
 
-  res.json({ passed, score_percent, reward });
+  const retake_at = !passed && REVIEW_RETAKE_HOURS > 0 ? new Date(Date.now() + REVIEW_RETAKE_HOURS * 3600 * 1000).toISOString() : null;
+  res.json({ passed, score_percent, pass_percent: REVIEW_PASS_PERCENT, retake_at, reward });
 });
 
 app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {

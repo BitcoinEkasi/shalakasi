@@ -1,0 +1,819 @@
+{
+ "_readme": "Approved variant questions for Chapters 2 to 9 (one extra per section, so each section has two and students get different questions). Options are kept close in length so the longest option is not a giveaway; the correct option is not systematically longer.",
+ "quizzes": [
+  {
+   "section_number": "2.0",
+   "question": "According to this section, what is money defined by, rather than by what it is made of?",
+   "options": [
+    "The weight and rarity of the material itself",
+    "The job it does and people's shared agreement",
+    "The official body that first approved its use"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "2.1",
+   "question": "Why did even non-smokers accept cigarettes in a prison economy?",
+   "options": [
+    "They were told to by the prison guards and staff",
+    "They were the only item the prison shop sold",
+    "They knew someone else would accept them too"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "2.2",
+   "question": "What does money's job as a 'unit of account' let people do?",
+   "options": [
+    "Price and compare very different things",
+    "Prove who owns a particular coin or note",
+    "Hold wealth safely until a later date"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "2.3",
+   "question": "What does the section name as gold's one real weakness as money?",
+   "options": [
+    "It rots quickly if it is not kept dry and cool",
+    "It cannot be split into smaller standard units",
+    "A large amount is heavy and hard to move around"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "2.4",
+   "question": "An early banknote that could be swapped for gold is an example of which kind of money?",
+   "options": [
+    "Representative money, a claim on gold",
+    "Commodity money, valuable in itself",
+    "Fiat money, backed only by decree"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "2.5",
+   "question": "According to this section, what does money that loses value quickly push people toward?",
+   "options": [
+    "Saving much more to wait for better prices",
+    "Spending straight away instead of saving",
+    "Swapping everything they own for cattle"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "3.0",
+   "question": "What does the section say usually frustrates people during the Barter Game?",
+   "options": [
+    "The person who wants your item lacks what you want",
+    "Nobody at all wants any of the things people brought",
+    "Everyone refuses to take part in any kind of trade"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "3.1",
+   "question": "Why does barter become nearly impossible in a town of ten thousand people?",
+   "options": [
+    "Large towns do not have enough spare food to trade",
+    "A perfect match of wants almost never comes up",
+    "Traders in big towns refuse to deal with strangers"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "3.1.1",
+   "question": "What does the word 'salary' point back to, according to this section?",
+   "options": [
+    "Medieval farmers being paid in sacks of grain",
+    "Sailors being paid in shells at the harbour",
+    "Roman soldiers being paid partly in salt rations"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "3.1.2",
+   "question": "What did the stamp on a coin let two strangers do?",
+   "options": [
+    "Prove that the metal was mined in their own town",
+    "Trust its weight and purity without testing it",
+    "Swap the coin for gold at any bank they liked"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "3.1.3",
+   "question": "Which limit on creating money disappeared once the link to gold was cut?",
+   "options": [
+    "Needing shops to give their permission first",
+    "Needing every note to be printed at a mint",
+    "Needing real gold to back any new money printed"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "3.1.4",
+   "question": "What does a card payment depend on, according to this section?",
+   "options": [
+    "The bank's systems and permission both working",
+    "A government office signing off on each purchase",
+    "The shop keeping enough cash in its till all day"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "3.2",
+   "question": "What is the key difference between Bitcoin-style digital money and bank digital money?",
+   "options": [
+    "It exists only as paper certificates kept in a vault",
+    "One trusted bank still holds everybody's balance",
+    "No single institution keeps the official record"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "4.0",
+   "question": "According to this section, what does the worth of a rand note rest on?",
+   "options": [
+    "Trust that people will keep on accepting it as money",
+    "The amount of gold stored in the central bank",
+    "The cost of the paper and ink used to print it"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "4.1",
+   "question": "How did other countries end up in the fiat system after 1971?",
+   "options": [
+    "Each one held a vote to leave the gold standard",
+    "Their currencies were pegged to the US dollar",
+    "The United States ordered them to make the switch"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "4.2",
+   "question": "In the layered picture of the fiat system, who can create the base currency?",
+   "options": [
+    "The central bank, at the very top",
+    "Commercial banks with branches",
+    "Ordinary users who earn and save"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "4.2.1",
+   "question": "Who tends to gain when a central bank lowers interest rates, according to this section?",
+   "options": [
+    "Older savers who rely on interest from banks",
+    "Borrowers and people who already own assets",
+    "People who keep all of their money as cash notes"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "4.2.2",
+   "question": "What detail about the lending chain surprises most people, according to this section?",
+   "options": [
+    "One bank is secretly printing all the extra money",
+    "The government approves every single loan by hand",
+    "Every bank simply follows a normal, legal process"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "4.2.3",
+   "question": "In the Cantillon example, who gets to spend at the old, lower prices?",
+   "options": [
+    "The worker whose raise comes through last",
+    "Whoever is handed the new money first of all",
+    "Every person in the economy at the same time"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "4.3",
+   "question": "What would a CBDC remove from between a person and the central bank?",
+   "options": [
+    "The shop that accepts the payment",
+    "The paper note that is handed over",
+    "The commercial bank in the middle"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.0",
+   "question": "What two ways of looking does this chapter ask you to hold together?",
+   "options": [
+    "Understanding a system and judging its effects",
+    "Studying the past and then predicting the future",
+    "Reading the text and then doing the activities"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.1",
+   "question": "According to this section, what can inflation always be traced back to?",
+   "options": [
+    "Bad weather that damages harvests each year",
+    "Shops deciding together to put their prices up",
+    "An identifiable cause, such as money creation"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.1.1",
+   "question": "At 10% a year, roughly what would the R100 basket cost after ten years?",
+   "options": [
+    "About R259",
+    "About R200",
+    "About R180"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.2",
+   "question": "Besides growing debt, what second problem does this section name?",
+   "options": [
+    "A shortage of bank branches in the small towns",
+    "A widening gap between asset holders and others",
+    "A drop in the number of people who have jobs"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.2.1",
+   "question": "What does the section say working harder cannot fix?",
+   "options": [
+    "A problem built into the money itself",
+    "A lack of skills needed for a better job",
+    "A shortage of jobs in your own area"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.2.2",
+   "question": "What is the comparison between the two groups really about, in this section?",
+   "options": [
+    "Whether people earn more than ten thousand a month",
+    "Whether wealth sits in assets or in wages and cash",
+    "Whether people live in big cities or in villages"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.2.3",
+   "question": "Which option for a government covers a debt gap but also feeds inflation?",
+   "options": [
+    "Raising taxes on shops, traders and workers",
+    "Cutting spending on public services and grants",
+    "Creating more currency to help cover the gap"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.3",
+   "question": "What did the community in this section ask about money?",
+   "options": [
+    "Whether banks could be made to lend much more",
+    "Whether money could work without one controller",
+    "Whether gold could be brought back by a new law"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.3.1",
+   "question": "How was the Cypherpunks' approach different from earlier attempts to fix money?",
+   "options": [
+    "They asked central banks to change their policies",
+    "They wrote new laws to limit what banks could do",
+    "They built systems needing no trusted institution"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.3.2",
+   "question": "What test does the section suggest for spotting a decentralized system?",
+   "options": [
+    "Could one party alone block someone from using it?",
+    "Does it have a website and a customer service line?",
+    "Is it older than the banks it is meant to replace?"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "5.3.3",
+   "question": "Why does physical cash not have a double-spend problem?",
+   "options": [
+    "Every note carries a different serial number",
+    "Banks check each note before it is spent",
+    "Handing it over means you no longer have it"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "6.0",
+   "question": "What was happening in the world when the Bitcoin whitepaper appeared in late 2008?",
+   "options": [
+    "A financial crisis that tested trust in banks",
+    "A boom in the price of gold and of silver coins",
+    "A new law that made bank cards the only money"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "6.1",
+   "question": "What does Bitcoin do that earlier digital cash systems did not do?",
+   "options": [
+    "Reduces the record-keepers to one trusted party",
+    "Maximises the number of record-keepers it uses",
+    "Lets one company approve each transaction"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "6.1.1",
+   "question": "What is the key asymmetry behind Proof-of-Work?",
+   "options": [
+    "Hard and costly to produce, but easy to check",
+    "Easy to produce, but very hard to check",
+    "Costly for honest miners but free for cheaters"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "6.1.2",
+   "question": "What happens if miners enforce rules that full nodes and users reject?",
+   "options": [
+    "The new rules take effect for the whole network",
+    "Their blocks are refused, so their power is wasted",
+    "Developers are forced to update all the software"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "6.2",
+   "question": "Which chapter's list of money properties does this section test Bitcoin against?",
+   "options": [
+    "Chapter 4",
+    "Chapter 5",
+    "Chapter 2"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "6.2.1",
+   "question": "Why is Bitcoin unusual in the history of money, according to this section?",
+   "options": [
+    "Its properties formed by accident over centuries",
+    "Its properties were chosen deliberately in advance",
+    "Its properties were set by a central bank in 2009"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "6.2.2",
+   "question": "What is the smallest unit of bitcoin mentioned in this section?",
+   "options": [
+    "A millibitcoin, 0.001 BTC",
+    "A centibitcoin, 0.01 BTC",
+    "A satoshi, 0.00000001 BTC"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "6.2.3",
+   "question": "Why is there no customer service line that can reverse a Bitcoin mistake?",
+   "options": [
+    "No single party can override the whole system",
+    "Banks are not allowed to hold any bitcoin at all",
+    "The software deletes the record after a few days"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.0",
+   "question": "What kind of skills does this chapter shift towards?",
+   "options": [
+    "Historical ones, such as studying old coins",
+    "Technical ones, such as writing mining code",
+    "Practical ones, such as setting up a wallet"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.1",
+   "question": "Which three ways of acquiring bitcoin does this section list?",
+   "options": [
+    "Trading in person, trading online, or an exchange",
+    "Mining at home, borrowing it, or taking a bank loan",
+    "Gifts only, from family, friends or an employer"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.1.1",
+   "question": "What does physical peer-to-peer trading not require, according to this section?",
+   "options": [
+    "A working Lightning or on-chain wallet to use",
+    "A bank account or ID check with a far-off company",
+    "Someone nearby who is willing to trade with you"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.1.2",
+   "question": "What do online peer-to-peer platforms use to protect both sides of a trade?",
+   "options": [
+    "Escrow services",
+    "Bank guarantees",
+    "Paper contracts"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.1.3",
+   "question": "On a centralized exchange, who holds your bitcoin until you withdraw it?",
+   "options": [
+    "You do, in your own private wallet",
+    "The exchange does, on your behalf",
+    "Your bank does, in your own account"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.2",
+   "question": "What does a Bitcoin wallet actually hold?",
+   "options": [
+    "Small amounts of bitcoin stored on the phone",
+    "Copies of every transaction on the blockchain",
+    "The keys that prove you control your bitcoin"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.2.1",
+   "question": "What is the cost of a self-custodial wallet, compared with a custodial one?",
+   "options": [
+    "A company can freeze your account at will",
+    "Nobody can help you recover a lost private key",
+    "You must trust a firm not to go out of business"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.2.2",
+   "question": "Which kind of wallet suits everyday spending, such as a taxi fare?",
+   "options": [
+    "An on-chain wallet",
+    "A paper wallet",
+    "A Lightning wallet"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.2.3",
+   "question": "What does closed-source wallet software prevent people from doing?",
+   "options": [
+    "Checking for themselves what the code does",
+    "Sending any bitcoin at all to other wallets",
+    "Using the wallet on more than one phone or tablet"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.3",
+   "question": "What is the recovery phrase described as in this section?",
+   "options": [
+    "A password that support staff can reset",
+    "A receipt that proves you bought bitcoin",
+    "The master key to all of your funds"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.4",
+   "question": "What does the section say you should do before confirming a send?",
+   "options": [
+    "Double-check the address",
+    "Phone your bank and ask",
+    "Wait a full day first"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.5",
+   "question": "How does the section describe bitcoin's price in the short term?",
+   "options": [
+    "Steady, so it carries no risk at all",
+    "Volatile, so it suits the long term",
+    "Fixed by the central bank each month"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "7.6",
+   "question": "What does 'Don't Trust, Verify' encourage you to do, as the section describes it?",
+   "options": [
+    "Check claims for yourself, using block explorers",
+    "Believe the course because it was written for you",
+    "Ask a friend to confirm anything you read online"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.0",
+   "question": "Which activity does this chapter ask you to do before the mechanics?",
+   "options": [
+    "Build a payment channel on your own computer",
+    "Watch a video explaining how Lightning works",
+    "Read the Lightning source code line by line"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.1",
+   "question": "Once a Lightning channel is open, how are the payments between the two people sent?",
+   "options": [
+    "Each one waits for a block on the base blockchain",
+    "Each one is approved by a bank before it is sent",
+    "Near-instantly and almost free, off the main chain"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.2",
+   "question": "What do the 'flavors' of Lightning wallet depend on?",
+   "options": [
+    "Which phone brand the app is for",
+    "Who holds the keys and the channels",
+    "How many merchants accept the wallet"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.2.1",
+   "question": "What does a custodial Lightning wallet ask of you, compared with self-custody?",
+   "options": [
+    "Managing your own channels and keys by yourself",
+    "Running your own full node at home all the time",
+    "Trusting a provider to run the channels for you"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.2.2",
+   "question": "What does open-source Lightning wallet software let the community do?",
+   "options": [
+    "Check that the code does what it claims",
+    "Change anyone's balance if enough people agree",
+    "Reverse a payment made by mistake"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.3",
+   "question": "Why do many people begin with a custodial Lightning wallet?",
+   "options": [
+    "It gives them full control over their own channels",
+    "It never needs a phone or an internet connection",
+    "Setup takes minutes and needs little technical work"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.4",
+   "question": "How long does a typical Lightning payment take to settle?",
+   "options": [
+    "Under a single second",
+    "About ten minutes",
+    "About a full day"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.5",
+   "question": "Where does this section say Bitcoin stops being theoretical?",
+   "options": [
+    "In a classroom, when you read about it",
+    "At the till, when you pay for things",
+    "On an exchange, when you trade it"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.5.1",
+   "question": "What do shoppers do at checkout when a store accepts Lightning through a plugin?",
+   "options": [
+    "Scan a QR code instead of typing card details",
+    "Type a long recovery phrase into the website",
+    "Wait for the bank to approve the whole purchase"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.5.2",
+   "question": "How is the EkasiPay network described in this section?",
+   "options": [
+    "A plan that will only start in a few years' time",
+    "Something happening at shops you can walk to",
+    "An example copied from a city far away from here"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.5.3",
+   "question": "What do bitcoin-linked gift cards and prepaid cards help people do?",
+   "options": [
+    "Avoid ever using bitcoin in any form whatsoever",
+    "Skip learning anything about wallets altogether",
+    "Ease from familiar payments into Lightning"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "8.5.4",
+   "question": "What does it mean for the circle to be 'strengthened' in a circular economy?",
+   "options": [
+    "Each person cashes out to rand as fast as possible",
+    "Each new merchant and local spender adds to it",
+    "Each shop stops taking any bitcoin payments"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.0",
+   "question": "What does this chapter say will make you a more confident Bitcoin user?",
+   "options": [
+    "Learning to write programs in several languages",
+    "Buying more bitcoin as often as you can",
+    "Understanding how it works under the hood"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.1",
+   "question": "What is the public key used for, according to this section?",
+   "options": [
+    "Receiving funds, and it can be shared openly",
+    "Proving ownership, and it must be kept secret",
+    "Mining new blocks, and it is kept offline"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.1.1",
+   "question": "Which direction does the link between the private and public key work in?",
+   "options": [
+    "Both: either key can be worked out from the other",
+    "Neither: the two keys are chosen independently",
+    "One way: the public key comes from the private"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.1.2",
+   "question": "What happens to a hash if you change just one letter of the input?",
+   "options": [
+    "It becomes a completely different string",
+    "It changes only in the last few characters",
+    "It stays exactly the same as before"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.2",
+   "question": "What happens to the leftover amount when you spend a UTXO?",
+   "options": [
+    "It is kept by the miner as an additional fee",
+    "It comes back to you as change in a new UTXO",
+    "It disappears from the whole network for good"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.3",
+   "question": "Which of the two roles proposes new blocks of transactions?",
+   "options": [
+    "Miners",
+    "Nodes",
+    "Developers"
+   ],
+   "correct_index": 0,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.3.1",
+   "question": "What does a full node download and check for itself?",
+   "options": [
+    "Only the transactions that its own owner makes",
+    "Every transaction and block, to check the rules",
+    "Only the very newest block, checked once each day"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.3.2",
+   "question": "What does the network's difficulty adjustment keep steady?",
+   "options": [
+    "About one new miner every ten days or so",
+    "About one new rule every ten weeks or so",
+    "About one new block every ten minutes"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.4",
+   "question": "Which transactions tend to be picked up first when the mempool is busy?",
+   "options": [
+    "Those that were sent the longest ago",
+    "Those offering higher fees",
+    "Those with the smallest amounts"
+   ],
+   "correct_index": 1,
+   "difficulty": "core"
+  },
+  {
+   "section_number": "9.5",
+   "question": "Who checks that a new block follows every rule, according to this section?",
+   "options": [
+    "Only the miner who built it",
+    "A bank chosen by the network",
+    "Every node, independently"
+   ],
+   "correct_index": 2,
+   "difficulty": "core"
+  }
+ ]
+}

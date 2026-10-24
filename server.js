@@ -307,6 +307,66 @@ async function masteredAtFor(studentId, sectionId) {
   return data?.mastered_at || new Date().toISOString();
 }
 
+
+// ---------------------------------------------------------
+// ANTI-CHEAT: sections in order, a fair reading time, and a cap on answers per minute.
+// All of it is checked here on the server; the browser cannot talk its way past it.
+// Set ANTICHEAT_OFF=1 in .env to switch the reading-time and speed checks off (for testing).
+// ---------------------------------------------------------
+const ANTICHEAT_OFF = process.env.ANTICHEAT_OFF === '1';
+const MIN_READ_SECONDS = 20, MAX_READ_SECONDS = 90, WORDS_PER_SECOND = 6; // 6 words a second is fast skimming
+const ANSWERS_PER_MINUTE = 12;
+const answerLog = new Map(); // studentId -> recent answer times
+
+function answeringTooFast(studentId) {
+  if (ANTICHEAT_OFF) return false;
+  const now = Date.now();
+  const recent = (answerLog.get(studentId) || []).filter((t) => now - t < 60000);
+  if (recent.length >= ANSWERS_PER_MINUTE) { answerLog.set(studentId, recent); return true; }
+  recent.push(now);
+  answerLog.set(studentId, recent);
+  return false;
+}
+setInterval(() => { const cut = Date.now() - 120000; for (const [k, v] of answerLog) if (!v.some((t) => t > cut)) answerLog.delete(k); }, 300000).unref();
+
+// Every section before this one (chapter order, then section order) must already be mastered.
+async function earlierSectionsDone(studentId, sectionId) {
+  const [{ data: chapters }, { data: sections }, { data: prog }] = await Promise.all([
+    supabase.from('chapters').select('id, sort_order'),
+    supabase.from('sections').select('id, number, chapter_id, sort_order'),
+    supabase.from('student_progress').select('section_id, status').eq('student_id', studentId),
+  ]);
+  const chOrder = Object.fromEntries((chapters || []).map((c) => [c.id, c.sort_order]));
+  const ordered = (sections || []).slice().sort((a, b) => (chOrder[a.chapter_id] - chOrder[b.chapter_id]) || (a.sort_order - b.sort_order));
+  const done = new Set((prog || []).filter((p) => p.status === 'mastered').map((p) => p.section_id));
+  for (const s of ordered) {
+    if (s.id === sectionId) return { ok: true };
+    if (!done.has(s.id)) return { ok: false, blocking: s.number };
+  }
+  return { ok: false };
+}
+
+// Has this student had a fair time with the section? Returns seconds still to wait (0 = fine, -1 = never opened).
+async function readingTimeLeft(studentId, section, quizIds) {
+  if (ANTICHEAT_OFF) return 0;
+  const { data: prog } = await supabase.from('student_progress').select('status, opened_at').eq('student_id', studentId).eq('section_id', section.id).maybeSingle();
+  if (!prog || !prog.opened_at) return -1;
+  if (prog.status === 'mastered') return 0; // revising
+  if (quizIds && quizIds.length) {
+    const { count } = await supabase.from('attempts').select('id', { count: 'exact', head: true }).eq('student_id', studentId).in('quiz_id', quizIds);
+    if (count) return 0; // already answered once: a retry
+  }
+  const words = String(section.content_md || '').split(/\s+/).filter(Boolean).length;
+  const need = Math.min(MAX_READ_SECONDS, Math.max(MIN_READ_SECONDS, Math.ceil(words / WORDS_PER_SECOND)));
+  const gone = (Date.now() - new Date(prog.opened_at).getTime()) / 1000;
+  return Math.max(0, Math.ceil(need - gone));
+}
+
+function tooFastReply(res, left) {
+  if (left < 0) return res.status(403).json({ error: 'not_opened', message: 'Open the section and read it first.' });
+  return res.status(429).json({ error: 'too_fast', wait: left, message: `Take a little more time with this section. You can answer in ${left} second${left === 1 ? '' : 's'}.` });
+}
+
 app.get('/api/sections/:id', requireStudent, async (req, res) => {
   const { data: section, error } = await supabase
     .from('sections')
@@ -327,9 +387,20 @@ app.get('/api/sections/:id', requireStudent, async (req, res) => {
   const { data: existingProgress } = await supabase
     .from('student_progress').select('status').eq('student_id', req.student.id).eq('section_id', section.id).maybeSingle();
   if (!existingProgress) {
+    const order = await earlierSectionsDone(req.student.id, section.id);
+    if (!order.ok) {
+      return res.status(403).json({ error: 'out_of_order', message: order.blocking ? `Finish section ${order.blocking} first.` : 'Finish the earlier sections first.' });
+    }
     const pace = await getPace(req.student.id);
     if (pace.blocked) {
       return res.status(403).json({ error: 'weekly_limit', message: 'You have done your sections for this week.', pace });
+    }
+  }
+  // Remember when this section was opened (starts the fair-reading-time clock; refreshed if left alone for hours).
+  if (existingProgress && existingProgress.status !== 'mastered') {
+    const { data: op } = await supabase.from('student_progress').select('opened_at').eq('student_id', req.student.id).eq('section_id', section.id).maybeSingle();
+    if (!op?.opened_at || Date.now() - new Date(op.opened_at).getTime() > 2 * 3600 * 1000) {
+      await supabase.from('student_progress').update({ opened_at: new Date().toISOString() }).eq('student_id', req.student.id).eq('section_id', section.id);
     }
   }
   // Opening a section never takes away a mastery it already has.
@@ -339,6 +410,7 @@ app.get('/api/sections/:id', requireStudent, async (req, res) => {
         student_id: req.student.id,
         section_id: section.id,
         status: 'in_progress',
+        opened_at: new Date().toISOString(),
         last_updated: new Date().toISOString(),
       },
       { onConflict: 'student_id,section_id', ignoreDuplicates: false }
@@ -353,6 +425,10 @@ app.post('/api/sections/:id/complete', requireStudent, async (req, res) => {
   if (quiz && quiz.length) {
     return res.status(400).json({ error: 'This section has checkpoint questions — use /attempt instead.' });
   }
+  const { data: secRow } = await supabase.from('sections').select('id, content_md').eq('id', req.params.id).single();
+  if (!secRow) return res.status(404).json({ error: 'Section not found' });
+  const left = await readingTimeLeft(req.student.id, secRow, null);
+  if (left !== 0) return tooFastReply(res, left);
 
   await supabase.from('student_progress').upsert(
     {
@@ -395,6 +471,11 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
   const { data: sections } = await supabase.from('sections').select('id, number').eq('chapter_id', chapter.id);
   const sectionIds = (sections || []).map((s) => s.id);
 
+  if (!ANTICHEAT_OFF) {
+    const { data: prog } = await supabase.from('student_progress').select('section_id').eq('student_id', req.student.id).eq('status', 'mastered').in('section_id', sectionIds);
+    if ((prog || []).length < sectionIds.length) return res.status(403).json({ error: 'out_of_order', message: 'Finish every section in this chapter before its review.' });
+  }
+
   const { data: questions } = await supabase
     .from('quiz_bank')
     .select('id, question, options, section_id, sections(number)')
@@ -422,6 +503,7 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
 app.post('/api/chapters/:id/review/answer', requireStudent, async (req, res) => {
   const { quizId, selectedIndex } = req.body;
   if (!quizId || !Number.isInteger(selectedIndex)) return res.status(400).json({ error: 'quizId and selectedIndex required' });
+  if (answeringTooFast(req.student.id)) return res.status(429).json({ error: 'slow_down', wait: 10, message: 'You are answering very fast. Slow down and read each question.' });
 
   const { data: quizItem } = await supabase
     .from('quiz_bank').select('correct_index, options, section_id, sections(chapter_id)').eq('id', quizId).single();
@@ -520,6 +602,10 @@ app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {
 
   const optCount = (quizItem.options || []).length;
   if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= optCount) return res.status(400).json({ error: 'Invalid answer' });
+  if (answeringTooFast(req.student.id)) return res.status(429).json({ error: 'slow_down', wait: 10, message: 'You are answering very fast. Slow down and read each question.' });
+  const { data: secRow } = await supabase.from('sections').select('id, content_md').eq('id', sectionId).single();
+  const left = await readingTimeLeft(req.student.id, secRow || { id: sectionId }, sectionQs.map((q) => q.id));
+  if (left !== 0) return tooFastReply(res, left);
   const originalIndex = quizMix.toOriginalIndex(req.student.id, quizItem.id, optCount, selectedIndex);
   const shownCorrect = quizMix.toDisplayedIndex(req.student.id, quizItem.id, optCount, quizItem.correct_index);
   const isCorrect = quizItem.correct_index === originalIndex;

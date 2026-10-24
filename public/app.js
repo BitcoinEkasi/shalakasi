@@ -426,6 +426,30 @@ async function submitReviewAnswer(quizId, selectedIndex) {
       }),
       minDelay,
     ]);
+    if (res.status === 429 || res.status === 403) {
+      const info = await res.json().catch(() => ({}));
+      clearInterval(hashInterval);
+      miningSlot.innerHTML = `
+        <div class="mining-anim"><div class="mining-label" style="color:var(--dusk);">${info.message || 'Slow down and read the section first.'}</div></div>
+        <button class="continue-btn" id="review-slow-ok">OK</button>`;
+      document.getElementById('review-slow-ok').addEventListener('click', () => {
+        document.querySelectorAll('#review-slot .quiz-opt').forEach((o) => o.classList.remove('disabled'));
+        miningSlot.innerHTML = '';
+      });
+      return;
+    }
+    if (res.status === 429 || res.status === 403) {
+      const info = await res.json().catch(() => ({}));
+      clearInterval(hashInterval);
+      miningSlot.innerHTML = `
+        <div class="mining-anim"><div class="mining-label" style="color:var(--dusk);">${info.message || 'Slow down and read the section first.'}</div></div>
+        <button class="continue-btn" id="slow-ok">OK</button>`;
+      document.getElementById('slow-ok').addEventListener('click', () => {
+        document.querySelectorAll('.quiz-opt').forEach((o) => o.classList.remove('disabled'));
+        miningSlot.innerHTML = '';
+      });
+      return;
+    }
     if (!res.ok) throw new Error(`Server returned ${res.status}`);
     data = await res.json();
   } catch (err) {

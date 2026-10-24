@@ -340,6 +340,17 @@ async function loadSection(sectionId, chapterNumber, chapterTitle) {
 }
 
 // ---------- CHAPTER REVIEW ----------
+// Shown after a failed chapter test: the next try opens later, so the test is not learned by answering it again and again.
+function showReviewWait(chapter, info) {
+  const when = new Date(info.retake_at).toLocaleString('en-ZA', { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' });
+  const el = document.getElementById('course-content');
+  el.innerHTML = `
+    <div class="crumb">Chapter ${chapter.number} · ${escapeHtmlDash(chapter.title)} <span>· Chapter Test</span></div>
+    <h1 class="section-title">Have another look first</h1>
+    <div class="review-note">You need ${info.pass_percent || 60}% to pass the Chapter ${chapter.number} test. Go back over the sections you were less sure of, then try again from <b>${when}</b>. You can open any section in this chapter from the list on the left.</div>
+  `;
+}
+
 // A cumulative test aggregating every checkpoint question from every
 // section in a chapter, shown once all of that chapter's sections are
 // mastered. Mandatory to go through, but the score doesn't block
@@ -350,6 +361,7 @@ async function loadChapterReview(chapter) {
   const res = await fetch(`/api/chapters/${chapter.id}/review`, { headers: authHeaders() });
   if (res.status === 401) return forceLogout();
   const data = await res.json();
+  if (res.status === 403 && data.error === 'retake_wait') { showReviewWait(chapter, data); return; }
 
   reviewQuestions = data.questions || [];
   reviewIndex = 0;
@@ -359,8 +371,8 @@ async function loadChapterReview(chapter) {
   const el = document.getElementById('course-content');
   el.innerHTML = `
     <div class="crumb">Chapter ${chapter.number} · ${escapeHtmlDash(chapter.title)} <span>· Chapter Review</span></div>
-    <h1 class="section-title">Let's check what stuck</h1>
-    <div class="review-note">Before moving into the next chapter, let's go back through everything from Chapter ${chapter.number} — ${reviewQuestions.length} questions, pulled from every section you just worked through.</div>
+    <h1 class="section-title">Chapter ${chapter.number} test</h1>
+    <div class="review-note">Before moving into the next chapter, show what stuck from Chapter ${chapter.number}: ${reviewQuestions.length} questions from every section you worked through. You need ${data.pass_percent || 60}% to pass.</div>
     <div id="review-slot"></div>
   `;
 
@@ -517,8 +529,8 @@ async function submitReviewAnswer(quizId, selectedIndex) {
       el.innerHTML = `
         <div class="crumb">Chapter ${reviewChapter.number} · ${escapeHtmlDash(reviewChapter.title)} <span>· Chapter Review</span></div>
         <h1 class="section-title">${scorePercent}% — not quite there yet</h1>
-        <div class="review-note">You need 70% to pass and move on to the next chapter. Worth going back through the sections you're less sure of before trying again.</div>
-        <button class="continue-btn" id="review-retry">Try the review again</button>
+        <div class="review-note">You need ${completeData.pass_percent || 60}% to pass and move on to the next chapter. Go back through the sections you are less sure of, then try again${completeData.retake_at ? ' from ' + new Date(completeData.retake_at).toLocaleString('en-ZA', { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' }) : ''}.</div>
+        <button class="continue-btn" id="review-retry">Back to the sections</button>
       `;
       document.getElementById('review-retry').addEventListener('click', () => loadChapterReview(reviewChapter));
     }

@@ -338,7 +338,7 @@ async function earlierSectionsDone(studentId, sectionId) {
   ]);
   const chOrder = Object.fromEntries((chapters || []).map((c) => [c.id, c.sort_order]));
   const ordered = (sections || []).slice().sort((a, b) => (chOrder[a.chapter_id] - chOrder[b.chapter_id]) || (a.sort_order - b.sort_order));
-  const done = new Set((prog || []).filter((p) => p.status === 'mastered').map((p) => p.section_id));
+  const done = new Set((prog || []).filter((p) => p.status === 'mastered' || p.status === 'reinforced').map((p) => p.section_id)); // a wrong answer still moves the student on
   for (const s of ordered) {
     if (s.id === sectionId) return { ok: true };
     if (!done.has(s.id)) return { ok: false, blocking: s.number };
@@ -472,7 +472,7 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
   const sectionIds = (sections || []).map((s) => s.id);
 
   if (!ANTICHEAT_OFF) {
-    const { data: prog } = await supabase.from('student_progress').select('section_id').eq('student_id', req.student.id).eq('status', 'mastered').in('section_id', sectionIds);
+    const { data: prog } = await supabase.from('student_progress').select('section_id').eq('student_id', req.student.id).in('status', ['mastered', 'reinforced']).in('section_id', sectionIds);
     if ((prog || []).length < sectionIds.length) return res.status(403).json({ error: 'out_of_order', message: 'Finish every section in this chapter before its review.' });
   }
 
@@ -618,15 +618,18 @@ app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {
     response_time_ms: responseTimeMs || null,
   });
 
+  // The score is the student's latest answer to each question, so one wrong answer is not held against them for ever.
   const ids = mine.map((q) => q.id);
   const { data: allAttempts } = await supabase
     .from('attempts')
-    .select('is_correct')
+    .select('quiz_id, is_correct, attempted_at')
     .eq('student_id', req.student.id)
-    .in('quiz_id', ids);
-
-  const total = allAttempts?.length || 1;
-  const correctCount = (allAttempts || []).filter((a) => a.is_correct).length;
+    .in('quiz_id', ids)
+    .order('attempted_at', { ascending: false });
+  const latest = new Map();
+  for (const a of allAttempts || []) if (!latest.has(a.quiz_id)) latest.set(a.quiz_id, a.is_correct);
+  const total = ids.length || 1;
+  const correctCount = [...latest.values()].filter(Boolean).length;
   const scorePercent = Math.round((correctCount / total) * 100);
   const masteryScore = scorePercent / 100;
 
@@ -637,7 +640,8 @@ app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {
       section_id: sectionId,
       status: newStatus,
       mastery_score: masteryScore,
-      ...(newStatus === 'mastered' ? { mastered_at: await masteredAtFor(req.student.id, sectionId) } : {}),
+      // 'mastered_at' is when the section was first finished (right or wrong); it is what the weekly pace counts from.
+      mastered_at: await masteredAtFor(req.student.id, sectionId),
       last_updated: new Date().toISOString(),
     },
     { onConflict: 'student_id,section_id' }
@@ -901,7 +905,7 @@ app.get('/api/admin/students', requireAdmin, async (req, res) => {
   const { data: students } = await supabase
     .from('students')
     .select('id, username, full_name, cohort, active, student_type, created_at')
-    .order('created_at', { ascending: false });
+    .order('attempted_at', { ascending: false });
   res.json(students || []);
 });
 

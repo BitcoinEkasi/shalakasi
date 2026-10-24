@@ -198,7 +198,7 @@ async function loadNextSection() {
   // from every section" actually happen at the end of each chapter,
   // not just leave it optional.
   for (const ch of data.chapters) {
-    const allMastered = ch.sections.length > 0 && ch.sections.every((s) => s.status === 'mastered');
+    const allMastered = ch.sections.length > 0 && ch.sections.every((s) => s.status === 'mastered' || s.status === 'reinforced');
     if (allMastered && !ch.review_passed) {
       loadChapterReview(ch);
       return;
@@ -208,7 +208,7 @@ async function loadNextSection() {
   let target = null;
   outer: for (const ch of data.chapters) {
     for (const s of ch.sections) {
-      if (s.status !== 'mastered') { target = { ...s, chapterNumber: ch.number, chapterTitle: ch.title }; break outer; }
+      if (s.status !== 'mastered' && s.status !== 'reinforced') { target = { ...s, chapterNumber: ch.number, chapterTitle: ch.title }; break outer; }
     }
   }
 

@@ -44,9 +44,10 @@ function paceState(progressRows, limit, now = new Date()) {
   const from = weekStart(now).getTime();
   let done = 0, open = 0;
   for (const p of progressRows || []) {
-    if (p.status === 'mastered') {
+    if (p.status === 'mastered' || p.status === 'reinforced') {
+      // finished (right, or wrong and moved on): counts in the week it was first finished
       if (p.mastered_at && new Date(p.mastered_at).getTime() >= from) done += 1;
-    } else if (p.status === 'in_progress' || p.status === 'reinforced') {
+    } else if (p.status === 'in_progress') {
       open += 1;
     }
   }

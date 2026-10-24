@@ -36,8 +36,8 @@ function ruleBasedDecision({ scorePercent, currentSection, nextSection }) {
   }
   return {
     type: 'reinforce',
-    toSectionId: currentSection.id,
-    reasoning: `Scored ${scorePercent}% on ${currentSection.number}, below the ${MASTERY_THRESHOLD * 100}% mastery threshold — reviewing the same section before moving on.`,
+    toSectionId: nextSection ? nextSection.id : null,
+    reasoning: `Not quite on ${currentSection.number} this time. Moving on: it will come up again in the chapter review, so it is worth a second read before then.`,
   };
 }
 

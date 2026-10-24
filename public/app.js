@@ -349,6 +349,7 @@ function showReviewWait(chapter, info) {
     <h1 class="section-title">Have another look first</h1>
     <div class="review-note">You need ${info.pass_percent || 60}% to pass the Chapter ${chapter.number} test. Go back over the sections you were less sure of, then try again from <b>${when}</b>. You can open any section in this chapter from the list on the left.</div>
   `;
+  renderChapterNav(chapter.number, null); // so the list of sections is there to click
 }
 
 // A cumulative test aggregating every checkpoint question from every

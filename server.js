@@ -132,10 +132,13 @@ function todayLocalDate() {
 }
 
 // ---------------------------------------------------------
-// Study pace: the most new sections a student can start in one week (Monday to Sunday, South African time).
+// Study pace: the most new sections a student can finish on one study day (South African time).
+// New sections open only on the student's own study days (their group's days in the two-week rotation), and never on a closed date.
 // The limit begins on STUDY_WEEK1_START, which is also the first Monday of the two-week centre rotation.
+// STUDY_CLOSED_DATES = comma-separated YYYY-MM-DD dates when the centre is shut (e.g. 2026-11-04).
 // ---------------------------------------------------------
-const SECTIONS_PER_WEEK = parseInt(process.env.SECTIONS_PER_WEEK, 10) || 3;
+const SECTIONS_PER_DAY = parseInt(process.env.SECTIONS_PER_DAY, 10) || 4;
+const STUDY_CLOSED_DATES = (process.env.STUDY_CLOSED_DATES || '').split(',').map((x) => x.trim()).filter(Boolean);
 const STUDY_WEEK1_START = process.env.STUDY_WEEK1_START || '2026-11-02';
 
 // Midnight (South African time) on the first Monday of the centre rotation.
@@ -143,8 +146,9 @@ function studyStartMs() { const [y, m, d] = STUDY_WEEK1_START.split('-').map(Num
 
 async function getPace(studentId) {
   const { data } = await supabase.from('student_progress').select('status, mastered_at').eq('student_id', studentId);
+  const { data: stu } = await supabase.from('students').select('study_group').eq('id', studentId).maybeSingle();
   const now = new Date();
-  const pace = studyPlan.paceState(data || [], SECTIONS_PER_WEEK, now);
+  const pace = studyPlan.paceState(data || [], SECTIONS_PER_DAY, now, { group: stu?.study_group ?? null, week1Start: STUDY_WEEK1_START, closed: STUDY_CLOSED_DATES });
   if (now.getTime() < studyStartMs()) pace.blocked = false; // the limit has not started yet
   return pace;
 }
@@ -303,7 +307,7 @@ app.get('/api/me/sats', requireStudent, async (req, res) => {
   res.json({ total: paid + pending, paid, pending });
 });
 
-// The moment a section was first mastered: kept if it already has one, so revising never counts twice towards the weekly pace.
+// The moment a section was first mastered: kept if it already has one, so revising never counts twice towards the daily pace.
 async function masteredAtFor(studentId, sectionId) {
   const { data } = await supabase.from('student_progress').select('mastered_at').eq('student_id', studentId).eq('section_id', sectionId).maybeSingle();
   return data?.mastered_at || new Date().toISOString();
@@ -398,7 +402,7 @@ app.get('/api/sections/:id', requireStudent, async (req, res) => {
   // Each student gets one question per section, with the answers in their own order.
   const myQuiz = quizMix.pickPerSection(req.student.id, quiz || []).map((q) => quizMix.presentQuestion(req.student.id, q));
 
-  // Starting a brand-new section counts against the weekly pace; one already started or mastered can always be opened.
+  // Starting a brand-new section counts against the daily pace; one already started or mastered can always be opened.
   const { data: existingProgress } = await supabase
     .from('student_progress').select('status').eq('student_id', req.student.id).eq('section_id', section.id).maybeSingle();
   if (!existingProgress) {
@@ -412,7 +416,7 @@ app.get('/api/sections/:id', requireStudent, async (req, res) => {
     }
     const pace = await getPace(req.student.id);
     if (pace.blocked) {
-      return res.status(403).json({ error: 'weekly_limit', message: 'You have done your sections for this week.', pace });
+      return res.status(403).json({ error: 'weekly_limit', message: pace.reason === 'not_study_day' ? 'Today is not a study day for you.' : 'You have done your sections for today.', pace });
     }
   }
   // Remember when this section was opened (starts the fair-reading-time clock; refreshed if left alone for hours).
@@ -669,7 +673,7 @@ app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {
       section_id: sectionId,
       status: newStatus,
       mastery_score: masteryScore,
-      // 'mastered_at' is when the section was first finished (right or wrong); it is what the weekly pace counts from.
+      // 'mastered_at' is when the section was first finished (right or wrong); it is what the daily pace counts from.
       mastered_at: await masteredAtFor(req.student.id, sectionId),
       last_updated: new Date().toISOString(),
     },
@@ -934,7 +938,7 @@ app.get('/api/admin/students', requireAdmin, async (req, res) => {
   const { data: students } = await supabase
     .from('students')
     .select('id, username, full_name, cohort, active, student_type, created_at')
-    .order('attempted_at', { ascending: false });
+    .order('created_at', { ascending: false });
   res.json(students || []);
 });
 

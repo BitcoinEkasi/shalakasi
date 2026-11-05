@@ -175,14 +175,15 @@ function showView(name) {
 // ---------- COURSE ----------
 let paceInfo = null;
 
-// Shown when a student has used this week's sections: nothing is wrong, the next one just opens on Monday.
+// Shown when a student has used today's sections, or today is not one of their study days: nothing is wrong, the next one just opens later.
 function showPaceWait(pace) {
   const opens = new Date(pace.opens_on).toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Johannesburg' });
   const el = document.getElementById('course-content');
+  const notToday = pace.reason === 'not_study_day';
   el.innerHTML = `
     <div class="crumb">Chapter pace</div>
-    <h1 class="section-title">That's enough for this week</h1>
-    <div class="review-note">You have finished your ${pace.limit} sections for this week. Your next section opens on <b>${opens}</b>. Until then you can go back over any section you have already done.</div>
+    <h1 class="section-title">${notToday ? 'Not a study day for you' : "That's enough for today"}</h1>
+    <div class="review-note">${notToday ? 'New sections are not open for you today.' : `You have finished your ${pace.limit} new sections for today.`} Your next section opens on <b>${opens}</b>. Until then you can go back over any section you have already done.</div>
   `;
 }
 

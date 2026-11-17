@@ -13,6 +13,7 @@ const multer = require('multer');
 const supabase = require('./services/supabase');
 const quizMix = require('./services/quizMix');
 const studyPlan = require('./services/studyPlan');
+const { buildGuestReport } = require('./services/guestReport');
 const trackerRewards = require('./services/trackerRewards');
 const bookFiles = require('./services/bookStorage');
 const { decideNextStep } = require('./services/aiEngine');
@@ -940,6 +941,27 @@ app.get('/api/admin/students', requireAdmin, async (req, res) => {
     .select('id, username, full_name, cohort, active, student_type, created_at')
     .order('created_at', { ascending: false });
   res.json(students || []);
+});
+
+// Guest accounts (cohort starting with "guest"): who they are, how far they have got, and which chapter tests they passed.
+app.get('/api/admin/guests', requireAdmin, async (req, res) => {
+  const { data: students, error } = await supabase
+    .from('students')
+    .select('id, username, full_name, cohort, active, created_at')
+    .ilike('cohort', 'guest%')
+    .order('created_at', { ascending: false });
+  if (error) return res.status(400).json({ error: error.message });
+  const ids = (students || []).map((s) => s.id);
+  if (!ids.length) return res.json([]);
+
+  const [{ data: chapters }, { data: sections }, { data: progress }, { data: reviews }, { data: logins }] = await Promise.all([
+    supabase.from('chapters').select('id, number, title, sort_order').order('sort_order'),
+    supabase.from('sections').select('id, chapter_id'),
+    supabase.from('student_progress').select('student_id, section_id, status').in('student_id', ids),
+    supabase.from('chapter_reviews').select('student_id, chapter_id, score_percent, passed, attempts, completed_at').in('student_id', ids),
+    supabase.from('attendance_log').select('student_id, last_login_at').in('student_id', ids),
+  ]);
+  res.json(buildGuestReport({ students, chapters: chapters || [], sections: sections || [], progress: progress || [], reviews: reviews || [], logins: logins || [] }));
 });
 
 app.get('/api/admin/students/:id/decisions', requireAdmin, async (req, res) => {

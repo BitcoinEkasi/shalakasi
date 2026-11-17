@@ -49,6 +49,7 @@ document.querySelectorAll('.admin-tab').forEach((tab) => {
     document.querySelectorAll('.admin-page').forEach((p) => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('page-' + tab.dataset.page).classList.add('active');
+    if (tab.dataset.page === 'guests') loadGuests();
     if (tab.dataset.page === 'books') loadBooks();
     if (tab.dataset.page === 'payouts') loadPayouts();
     if (tab.dataset.page === 'register') loadRegister();
@@ -676,4 +677,48 @@ async function loadPayouts() {
       row.querySelector('[data-act="reject"]').addEventListener('click', () => decide('rejected'));
     }
   });
+}
+
+
+// ---------- GUESTS ----------
+async function loadGuests() {
+  const tbody = document.getElementById('guest-rows');
+  tbody.innerHTML = `<tr><td colspan="6" class="empty-note">Loading…</td></tr>`;
+  const res = await fetch('/api/admin/guests', { headers: adminHeaders() });
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="6" class="empty-note">Could not load guests.</td></tr>`; return; }
+  const guests = await res.json();
+  if (!guests.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-note">No guests yet. Add a student on the Students page and give them a cohort that starts with &ldquo;guest&rdquo;.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = guests.map((g, i) => `
+    <tr class="row-clickable guest-row" data-i="${i}">
+      <td>${escapeHtml(g.full_name)}</td>
+      <td><span class="pill">${escapeHtml(g.username)}</span></td>
+      <td>${g.sections_done} of ${g.sections_total} (${g.percent}%)</td>
+      <td>${g.tests_passed} of ${g.tests_total}</td>
+      <td>${g.current_chapter ? 'Chapter ' + g.current_chapter : (g.sections_done ? 'Finished' : 'Not started')}</td>
+      <td>${g.last_login_at ? new Date(g.last_login_at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Never'}</td>
+    </tr>
+    <tr class="guest-detail" id="guest-detail-${i}" style="display:none;"><td colspan="6">${guestChapterTable(g)}</td></tr>`).join('');
+  tbody.querySelectorAll('.guest-row').forEach((row) => {
+    row.addEventListener('click', () => {
+      const d = document.getElementById('guest-detail-' + row.dataset.i);
+      d.style.display = d.style.display === 'none' ? '' : 'none';
+    });
+  });
+}
+
+function guestChapterTable(g) {
+  const rows = g.chapters.map((c) => {
+    let test = '<span class="pill">not taken</span>';
+    if (c.test) {
+      const when = c.test.completed_at ? new Date(c.test.completed_at).toLocaleDateString([], { day: 'numeric', month: 'short' }) : '';
+      test = c.test.passed
+        ? `<span class="pill active">passed ${c.test.score_percent}%</span> <span class="pill">${c.test.attempts} ${c.test.attempts === 1 ? 'attempt' : 'attempts'}${when ? ', ' + when : ''}</span>`
+        : `<span class="pill">not passed yet (last ${c.test.score_percent}%)</span> <span class="pill">${c.test.attempts} ${c.test.attempts === 1 ? 'attempt' : 'attempts'}${when ? ', ' + when : ''}</span>`;
+    }
+    return `<tr><td>Chapter ${c.number}: ${escapeHtml(c.title)}</td><td>${c.sections_done} of ${c.sections_total}</td><td>${test}</td></tr>`;
+  }).join('');
+  return `<table class="student-table" style="margin:6px 0;"><thead><tr><th>Chapter</th><th>Sections done</th><th>Chapter test</th></tr></thead><tbody>${rows}</tbody></table>`;
 }

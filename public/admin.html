@@ -33,6 +33,7 @@
     </div>
     <div class="admin-tabs">
       <button class="admin-tab active" data-page="students">Students</button>
+      <button class="admin-tab" data-page="guests">Guests</button>
       <button class="admin-tab" data-page="books">Books</button>
       <button class="admin-tab" data-page="payouts">Payouts</button>
       <button class="admin-tab" data-page="register">Register</button>
@@ -169,6 +170,22 @@
         </thead>
         <tbody id="summary-rows">
           <tr><td colspan="3" class="empty-note">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- GUESTS PAGE -->
+  <div class="admin-page" id="page-guests">
+    <div class="admin-body">
+      <h1 class="page-title">Guests</h1>
+      <p class="page-sub">People doing the course outside the Diploma classes. A guest is any account whose cohort starts with &ldquo;guest&rdquo;. Click a name to see each chapter.</p>
+      <table class="student-table">
+        <thead>
+          <tr><th>Name</th><th>Username</th><th>Sections done</th><th>Chapter tests passed</th><th>Now on</th><th>Last login</th></tr>
+        </thead>
+        <tbody id="guest-rows">
+          <tr><td colspan="6" class="empty-note">Loading…</td></tr>
         </tbody>
       </table>
     </div>

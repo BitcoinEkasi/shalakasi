@@ -296,6 +296,9 @@ app.get('/api/book', requireStudent, async (req, res) => {
 
 // The student's own running total of sats earned (paid + still waiting for approval; rejected ones don't count).
 app.get('/api/me/sats', requireStudent, async (req, res) => {
+  // Guests (outside learners) do not earn sats, so the browser hides the chip for them.
+  const { data: me } = await supabase.from('students').select('cohort').eq('id', req.student.id).maybeSingle();
+  if (me && /^guest/i.test(me.cohort || '')) return res.json({ guest: true, total: 0, paid: 0, pending: 0 });
   trackerRewards.syncUnsent(req.student.id).catch(() => {});
   await trackerRewards.refreshStatuses(req.student.id);
   const { data, error } = await supabase.from('payouts').select('amount_sats, status').eq('student_id', req.student.id);

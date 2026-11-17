@@ -44,6 +44,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'shalakasi-dev-secret-change-me';
 const MASTERY_THRESHOLD = 0.75;
 const POSTGRAD_MASTERY_THRESHOLD = 0.75;
 const REVIEW_PASS_PERCENT = parseInt(process.env.REVIEW_PASS_PERCENT, 10) || 60;
+const GUEST_PASS_PERCENT = parseInt(process.env.GUEST_PASS_PERCENT, 10) || 80;
+// Guests (cohort starting with "guest") must score higher to pass a chapter test.
+async function passPercentFor(studentId) {
+  const { data } = await supabase.from('students').select('cohort').eq('id', studentId).maybeSingle();
+  return /^guest/i.test(data?.cohort || '') ? GUEST_PASS_PERCENT : REVIEW_PASS_PERCENT;
+}
 const REVIEW_PER_SECTION = parseInt(process.env.REVIEW_PER_SECTION, 10) || 2; // chapter test: up to this many questions from each section
 const REVIEW_RETAKE_HOURS = process.env.REVIEW_RETAKE_HOURS !== undefined && process.env.REVIEW_RETAKE_HOURS !== '' ? Number(process.env.REVIEW_RETAKE_HOURS) : 24;
 // Sats rewards for progress (pending until an admin approves them).
@@ -518,19 +524,20 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
     section_number: q.sections?.number,
   }));
 
+  const passPercent = await passPercentFor(req.student.id);
   // After a fail the student waits before trying again, so the test cannot be learned by answering it over and over.
   const { data: lastTry } = await supabase.from('chapter_reviews').select('passed, completed_at').eq('student_id', req.student.id).eq('chapter_id', chapter.id).maybeSingle();
   if (lastTry && !lastTry.passed && REVIEW_RETAKE_HOURS > 0 && lastTry.completed_at) {
     const opens = new Date(new Date(lastTry.completed_at).getTime() + REVIEW_RETAKE_HOURS * 3600 * 1000);
     if (opens.getTime() > Date.now()) {
-      return res.status(403).json({ error: 'retake_wait', retake_at: opens.toISOString(), pass_percent: REVIEW_PASS_PERCENT, message: 'Have another look at the sections you were less sure of. You can try the test again later.' });
+      return res.status(403).json({ error: 'retake_wait', retake_at: opens.toISOString(), pass_percent: passPercent, message: 'Have another look at the sections you were less sure of. You can try the test again later.' });
     }
   }
 
   // Opening the review starts a fresh attempt: forget earlier recorded answers.
   await supabase.from('review_answers').delete().eq('student_id', req.student.id).eq('chapter_id', chapter.id);
 
-  res.json({ chapter: { id: chapter.id, number: chapter.number, title: chapter.title }, questions: shaped, pass_percent: REVIEW_PASS_PERCENT });
+  res.json({ chapter: { id: chapter.id, number: chapter.number, title: chapter.title }, questions: shaped, pass_percent: passPercent });
 });
 
 // Grades one question at a time, stateless — no DB write here. This
@@ -599,7 +606,8 @@ app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) =
     const correct = answers.filter((a) => a.is_correct).length;
     score_percent = Math.round((correct / total) * 100);
   }
-  const passed = score_percent >= REVIEW_PASS_PERCENT;
+  const passPercent = await passPercentFor(req.student.id);
+  const passed = score_percent >= passPercent;
 
   await supabase.from('chapter_reviews').upsert(
     {
@@ -622,7 +630,7 @@ app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) =
   }
 
   const retake_at = !passed && REVIEW_RETAKE_HOURS > 0 ? new Date(Date.now() + REVIEW_RETAKE_HOURS * 3600 * 1000).toISOString() : null;
-  res.json({ passed, score_percent, pass_percent: REVIEW_PASS_PERCENT, retake_at, reward });
+  res.json({ passed, score_percent, pass_percent: passPercent, retake_at, reward });
 });
 
 app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {

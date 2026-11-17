@@ -110,6 +110,7 @@ async function refreshSatsChip() {
     const res = await fetch('/api/me/sats', { headers: authHeaders(), cache: 'no-store' });
     if (!res.ok) return;
     const d = await res.json();
+    if (d.guest) { el.style.display = 'none'; return; }
     el.innerHTML = `<span class="sats-num">⚡ ${Number(d.total).toLocaleString('en-US')}</span> sats earned in total`;
     el.title = `${d.paid} sats paid · ${d.pending} sats waiting for approval`;
     el.style.display = '';

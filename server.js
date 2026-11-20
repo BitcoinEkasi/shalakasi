@@ -53,7 +53,7 @@ async function passPercentFor(studentId) {
 const REVIEW_PER_SECTION = parseInt(process.env.REVIEW_PER_SECTION, 10) || 2; // chapter test: up to this many questions from each section
 const REVIEW_RETAKE_HOURS = process.env.REVIEW_RETAKE_HOURS !== undefined && process.env.REVIEW_RETAKE_HOURS !== '' ? Number(process.env.REVIEW_RETAKE_HOURS) : 24;
 // Sats rewards for progress (pending until an admin approves them).
-const CHAPTER_PASS_SATS = parseInt(process.env.CHAPTER_PASS_SATS, 10) || 1000;
+const chapterPassSats = () => (parseInt(process.env.CHAPTER_PASS_SATS, 10) || (Date.now() >= Date.UTC(2026, 10, 23) - 2 * 3600 * 1000 ? 1000 : 500)); // 1000 sats from Mon 23 Nov 2026 (SAST)
 const BOOK_PASS_SATS = parseInt(process.env.BOOK_PASS_SATS, 10) || 1000;
 
 // Logs a reward as pending. Returns {sats, status:'pending'} only when a new
@@ -625,7 +625,7 @@ app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) =
   let reward = null;
   if (passed && total > 0) {
     reward = await createPayoutIfNew(
-      req.student.id, 'chapter', chapterId, `Chapter ${chapter.number} review`, CHAPTER_PASS_SATS
+      req.student.id, 'chapter', chapterId, `Chapter ${chapter.number} review`, chapterPassSats()
     );
   }
 

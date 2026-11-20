@@ -245,7 +245,7 @@ function fakeCertHash(seed) {
 function renderCertificate(chapters) {
   const totalChapters = chapters.length;
   const chaptersPassed = chapters.filter((c) => c.review_passed).length;
-  const SATS_PER_CHAPTER = 500;
+  const SATS_PER_CHAPTER = 1000;
   const satsEarned = chaptersPassed * SATS_PER_CHAPTER;
   const today = new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
   const hash = fakeCertHash(`${student.username}-${student.id}-${today}`);
@@ -922,7 +922,7 @@ async function loadDashboard() {
 
   const totalSections = data.chapters.reduce((n, c) => n + c.sections.length, 0);
   const masteredSections = data.chapters.reduce((n, c) => n + c.sections.filter((s) => s.status === 'mastered').length, 0);
-  const SATS_PER_CHAPTER = 500;
+  const SATS_PER_CHAPTER = 1000;
   const chaptersPassed = data.chapters.filter((c) => c.review_passed).length;
   const satsEarned = chaptersPassed * SATS_PER_CHAPTER;
 
@@ -933,7 +933,7 @@ async function loadDashboard() {
       <div class="sats-earned-icon">⚡</div>
       <div>
         <div class="sats-earned-value">${satsEarned.toLocaleString()} sats earned</div>
-        <div class="sats-earned-sub">${chaptersPassed} chapter${chaptersPassed === 1 ? '' : 's'} passed · 500 sats per chapter review</div>
+        <div class="sats-earned-sub">${chaptersPassed} chapter${chaptersPassed === 1 ? '' : 's'} passed · 1,000 sats per chapter review</div>
       </div>
     </div>
     <div class="path-wrap" id="path-wrap">

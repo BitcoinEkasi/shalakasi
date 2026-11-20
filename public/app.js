@@ -245,7 +245,7 @@ function fakeCertHash(seed) {
 function renderCertificate(chapters) {
   const totalChapters = chapters.length;
   const chaptersPassed = chapters.filter((c) => c.review_passed).length;
-  const SATS_PER_CHAPTER = Date.now() >= Date.UTC(2026, 10, 23) - 2 * 3600 * 1000 ? 1000 : 500;
+  const SATS_PER_CHAPTER = Date.now() >= Date.UTC(2026, 10, 16) - 2 * 3600 * 1000 ? 1000 : 500;
   const satsEarned = chaptersPassed * SATS_PER_CHAPTER;
   const today = new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
   const hash = fakeCertHash(`${student.username}-${student.id}-${today}`);
@@ -922,7 +922,7 @@ async function loadDashboard() {
 
   const totalSections = data.chapters.reduce((n, c) => n + c.sections.length, 0);
   const masteredSections = data.chapters.reduce((n, c) => n + c.sections.filter((s) => s.status === 'mastered').length, 0);
-  const SATS_PER_CHAPTER = Date.now() >= Date.UTC(2026, 10, 23) - 2 * 3600 * 1000 ? 1000 : 500;
+  const SATS_PER_CHAPTER = Date.now() >= Date.UTC(2026, 10, 16) - 2 * 3600 * 1000 ? 1000 : 500;
   const chaptersPassed = data.chapters.filter((c) => c.review_passed).length;
   const satsEarned = chaptersPassed * SATS_PER_CHAPTER;
 

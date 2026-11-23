@@ -110,7 +110,7 @@ async function refreshSatsChip() {
     const res = await fetch('/api/me/sats', { headers: authHeaders(), cache: 'no-store' });
     if (!res.ok) return;
     const d = await res.json();
-    if (d.guest) { el.style.display = 'none'; return; }
+    if (d.guest) { window.isGuest = true; el.style.display = 'none'; return; }
     el.innerHTML = `<span class="sats-num">⚡ ${Number(d.total).toLocaleString('en-US')}</span> sats earned in total`;
     el.title = `${d.paid} sats paid · ${d.pending} sats waiting for approval`;
     el.style.display = '';
@@ -215,7 +215,7 @@ async function loadNextSection() {
   }
 
   if (!target) {
-    renderCertificate(data.chapters);
+    loadFinalExam(data.chapters);
     return;
   }
 
@@ -242,11 +242,87 @@ function fakeCertHash(seed) {
   return hex;
 }
 
-function renderCertificate(chapters) {
+// ---------- FINAL EXAM ----------
+// After every chapter test: one exam with questions from all chapters. No answers are shown until the end.
+let finalQs = [], finalIdx = 0;
+
+async function loadFinalExam(chapters) {
+  const res = await fetch('/api/final/status', { headers: authHeaders(), cache: 'no-store' });
+  if (res.status === 401) return forceLogout();
+  const st = await res.json();
+  if (st.guest) window.isGuest = true;
+  if (st.passed) { renderCertificate(chapters, st); return; }
+  const needCentre = st.centre_only && !st.at_centre;
+  document.getElementById('course-content').innerHTML = `
+    <div class="crumb">All chapters complete <span>· Final Exam</span></div>
+    <h1 class="section-title">The final exam</h1>
+    <div class="review-note">You have passed every chapter test. Now show everything you have learned: about 50 questions from all the chapters. You need ${st.pass_percent}% to pass. No help is given and no answers are shown until the end, so read each question carefully.${needCentre ? '<br><br><b>The final exam is written at the Bitcoin Ekasi centre, with your teacher there.</b> Come to the centre to start it.' : ''}</div>
+    ${needCentre ? '' : '<button class="continue-btn" id="final-start">Start the final exam</button>'}
+    <div id="final-msg"></div>`;
+  const btn = document.getElementById('final-start');
+  if (btn) btn.addEventListener('click', () => startFinalExam(chapters));
+}
+
+async function startFinalExam(chapters) {
+  const res = await fetch('/api/final/start', { method: 'POST', headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const when = data.retake_at ? ' You can try again from ' + new Date(data.retake_at).toLocaleString('en-ZA', { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' }) + '.' : '';
+    document.getElementById('final-msg').innerHTML = `<div class="review-note" style="margin-top:14px;">${escapeHtmlDash(data.message || 'Could not start the exam.')}${when}</div>`;
+    return;
+  }
+  finalQs = data.questions || [];
+  finalIdx = 0;
+  renderFinalQuestion(chapters);
+}
+
+function renderFinalQuestion(chapters) {
+  const q = finalQs[finalIdx];
+  const el = document.getElementById('course-content');
+  el.innerHTML = `
+    <div class="crumb">Final Exam</div>
+    <div class="checkpoint-card">
+      <div class="checkpoint-head"><div class="checkpoint-label">Question ${finalIdx + 1} of ${finalQs.length}</div></div>
+      <div class="checkpoint-q">${q.question}</div>
+      <div class="quiz-options">${q.options.map((opt, i) => `<div class="quiz-opt" data-index="${i}">${opt}</div>`).join('')}</div>
+      <div id="final-msg"></div>
+    </div>`;
+  el.querySelectorAll('.quiz-opt').forEach((opt) => opt.addEventListener('click', () => answerFinal(q.id, parseInt(opt.dataset.index, 10), chapters)));
+}
+
+async function answerFinal(quizId, selectedIndex, chapters) {
+  const opts = document.querySelectorAll('#course-content .quiz-opt');
+  opts.forEach((o) => o.classList.add('disabled'));
+  const res = await fetch('/api/final/answer', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ quizId, selectedIndex }) });
+  if (!res.ok) {
+    const info = await res.json().catch(() => ({}));
+    document.getElementById('final-msg').innerHTML = `<div class="review-note" style="margin-top:14px;">${escapeHtmlDash(info.message || 'Something went wrong. Try that question again.')}</div>`;
+    opts.forEach((o) => o.classList.remove('disabled'));
+    return;
+  }
+  finalIdx++;
+  if (finalIdx < finalQs.length) { renderFinalQuestion(chapters); return; }
+  finishFinalExam(chapters);
+}
+
+async function finishFinalExam(chapters) {
+  const res = await fetch('/api/final/complete', { method: 'POST', headers: authHeaders() });
+  const d = await res.json().catch(() => ({}));
+  const el = document.getElementById('course-content');
+  if (!res.ok) { el.innerHTML = `<div class="crumb">Final Exam</div><div class="review-note">${escapeHtmlDash(d.message || 'Could not finish the exam. Tell your teacher.')}</div>`; return; }
+  if (d.passed) {
+    el.innerHTML = `<div class="crumb">Final Exam</div><h1 class="section-title">${d.score_percent}% — you passed! 🎉</h1><div class="review-note">You passed the final exam. Well done.</div><button class="continue-btn" id="final-cert">See my certificate</button>`;
+    document.getElementById('final-cert').addEventListener('click', () => loadNextSection());
+  } else {
+    const when = d.retake_at ? ' Try again from ' + new Date(d.retake_at).toLocaleString('en-ZA', { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' }) + '.' : '';
+    el.innerHTML = `<div class="crumb">Final Exam</div><h1 class="section-title">${d.score_percent}% — not yet</h1><div class="review-note">You need ${d.pass_percent}% to pass the final exam. Go back over the chapters you were less sure of, and try again.${when}</div>`;
+  }
+}
+
+function renderCertificate(chapters, fin) {
   const totalChapters = chapters.length;
   const chaptersPassed = chapters.filter((c) => c.review_passed).length;
-  const SATS_PER_CHAPTER = Date.now() >= Date.UTC(2026, 10, 16) - 2 * 3600 * 1000 ? 1000 : 500;
-  const satsEarned = chaptersPassed * SATS_PER_CHAPTER;
+  const finalScore = fin && fin.score_percent != null ? fin.score_percent + '%' : '—';
   const today = new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
   const hash = fakeCertHash(`${student.username}-${student.id}-${today}`);
 
@@ -263,7 +339,7 @@ function renderCertificate(chapters) {
 
         <div class="cert-stats">
           <div class="cert-stat"><div class="cert-stat-value">${chaptersPassed}/${totalChapters}</div><div class="cert-stat-label">Chapters mastered</div></div>
-          <div class="cert-stat"><div class="cert-stat-value">⚡ ${satsEarned.toLocaleString()}</div><div class="cert-stat-label">Sats earned</div></div>
+          <div class="cert-stat"><div class="cert-stat-value">${finalScore}</div><div class="cert-stat-label">Final exam</div></div>
           <div class="cert-stat"><div class="cert-stat-value">${today}</div><div class="cert-stat-label">Completion date</div></div>
         </div>
 
@@ -941,13 +1017,13 @@ async function loadDashboard() {
   el.innerHTML = `
     <h1 class="dash-title">${student.full_name}'s progress</h1>
     <p class="dash-sub">${masteredSections} of ${totalSections} sections mastered · Study &amp; Stack is building this path as you go, not following a fixed order.</p>
-    <div class="sats-earned-card">
+    ${window.isGuest ? '' : `    <div class="sats-earned-card">
       <div class="sats-earned-icon">⚡</div>
       <div>
         <div class="sats-earned-value">${satsEarned.toLocaleString()} sats earned</div>
         <div class="sats-earned-sub">${chaptersPassed} chapter${chaptersPassed === 1 ? '' : 's'} passed · ${SATS_PER_CHAPTER.toLocaleString()} sats per chapter review</div>
       </div>
-    </div>
+    </div>`}
     <div class="path-wrap" id="path-wrap">
       <svg class="path-svg" id="path-svg"></svg>
       ${data.chapters.map((ch, i) => {

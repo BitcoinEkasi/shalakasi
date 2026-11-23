@@ -3,7 +3,7 @@
 const median = (a) => { const s = a.slice().sort((x, y) => x - y); const n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : null; };
 const cleanIp = (ip) => String(ip || '').replace(/^::ffff:/, '').trim();
 
-function buildIntegrityReport({ students, chapters, reviews, payouts, attempts, logins, centreIps = [], maxAttempts = 3, fastMs = 4000 }) {
+function buildIntegrityReport({ students, chapters, reviews, payouts, attempts, logins, finals = [], centreIps = [], maxAttempts = 3, fastMs = 4000 }) {
   const who = new Map(students.map((s) => [s.id, s]));
   const num = new Map(chapters.map((c) => [c.id, c.number]));
   const rewardStatus = new Map(payouts.map((p) => [p.student_id + '|' + p.label, p.status]));
@@ -55,7 +55,16 @@ function buildIntegrityReport({ students, chapters, reviews, payouts, attempts, 
     shared.push({ ip, students: [...m.keys()].map((id) => who.get(id).full_name), days: [...new Set([...m.values()].flatMap((d) => [...d]))].sort() });
   }
 
-  return { tests, locked: tests.filter((t) => t.locked), fast, shared };
+  const finalExams = finals
+    .filter((f) => who.has(f.student_id))
+    .map((f) => ({
+      student_id: f.student_id, name: who.get(f.student_id).full_name, guest: /^guest/i.test(who.get(f.student_id).cohort || ''),
+      score_percent: f.score_percent, passed: !!f.passed, attempts: f.attempts || 0, completed_at: f.completed_at,
+      locked: !f.passed && (f.attempts || 0) >= maxAttempts + (f.extra_attempts || 0),
+    }))
+    .sort((a, b) => String(b.completed_at || '').localeCompare(String(a.completed_at || '')));
+
+  return { tests, locked: tests.filter((t) => t.locked), finals: finalExams, fast, shared };
 }
 
 module.exports = { buildIntegrityReport };

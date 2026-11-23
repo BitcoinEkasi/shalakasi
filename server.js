@@ -15,6 +15,7 @@ const quizMix = require('./services/quizMix');
 const studyPlan = require('./services/studyPlan');
 const { buildGuestReport } = require('./services/guestReport');
 const { buildIntegrityReport } = require('./services/integrityReport');
+const { pickFinalQuestions } = require('./services/finalExam');
 const trackerRewards = require('./services/trackerRewards');
 const bookFiles = require('./services/bookStorage');
 const { decideNextStep } = require('./services/aiEngine');
@@ -643,6 +644,111 @@ app.post('/api/chapters/:id/review/complete', requireStudent, async (req, res) =
   res.json({ passed, score_percent, pass_percent: passPercent, retake_at, reward });
 });
 
+// ---------------------------------------------------------
+// FINAL EXAM: after every chapter test is passed, one exam with questions from all chapters.
+// No answers are shown until the end. Students write it at the centre; guests can write it anywhere.
+// ---------------------------------------------------------
+const FINAL_PASS_PERCENT = parseInt(process.env.FINAL_PASS_PERCENT, 10) || 80;
+const FINAL_PER_CHAPTER = parseInt(process.env.FINAL_PER_CHAPTER, 10) || 5; // 10 chapters x 5 = 50 questions
+const isCentreIp = (ip) => CENTRE_IPS.includes(String(ip || '').replace(/^::ffff:/, '').trim());
+
+async function finalState(studentId) {
+  const [{ data: me }, { data: chapters }, { data: reviews }, { data: fin }] = await Promise.all([
+    supabase.from('students').select('cohort').eq('id', studentId).maybeSingle(),
+    supabase.from('chapters').select('id'),
+    supabase.from('chapter_reviews').select('chapter_id, passed').eq('student_id', studentId),
+    supabase.from('final_exams').select('*').eq('student_id', studentId).maybeSingle(),
+  ]);
+  const passedIds = new Set((reviews || []).filter((r) => r.passed).map((r) => r.chapter_id));
+  return { guest: /^guest/i.test(me?.cohort || ''), eligible: (chapters || []).length > 0 && chapters.every((c) => passedIds.has(c.id)), fin: fin || null };
+}
+
+async function finalQuestionsFor(studentId, round) {
+  const [{ data: chapters }, { data: sections }, { data: quiz }] = await Promise.all([
+    supabase.from('chapters').select('id, number, sort_order'),
+    supabase.from('sections').select('id, chapter_id'),
+    supabase.from('quiz_bank').select('id, question, options, section_id').limit(5000),
+  ]);
+  return pickFinalQuestions(studentId, round, chapters || [], sections || [], quiz || [], FINAL_PER_CHAPTER);
+}
+
+// The checks every final-exam call must pass. Returns an error reply, or null when all is well.
+function finalBlock(st, req) {
+  if (!st.eligible) return { code: 403, body: { error: 'not_ready', message: 'Pass every chapter test first.' } };
+  if (st.fin && st.fin.passed) return { code: 403, body: { error: 'already_passed', message: 'You have already passed the final exam.' } };
+  if (!st.guest && !isCentreIp(req.ip)) return { code: 403, body: { error: 'centre_only', message: 'The final exam is written at the Bitcoin Ekasi centre, with your teacher there. Come to the centre to start it.' } };
+  return null;
+}
+
+app.get('/api/final/status', requireStudent, async (req, res) => {
+  const st = await finalState(req.student.id);
+  res.json({
+    guest: st.guest, eligible: st.eligible, passed: !!(st.fin && st.fin.passed), score_percent: st.fin ? st.fin.score_percent : null,
+    attempts: st.fin ? st.fin.attempts : 0, pass_percent: FINAL_PASS_PERCENT, centre_only: !st.guest, at_centre: isCentreIp(req.ip),
+  });
+});
+
+app.post('/api/final/start', requireStudent, async (req, res) => {
+  const st = await finalState(req.student.id);
+  const blocked = finalBlock(st, req);
+  if (blocked) return res.status(blocked.code).json(blocked.body);
+  const f = st.fin;
+  if (f && (f.attempts || 0) >= REVIEW_MAX_ATTEMPTS + (f.extra_attempts || 0)) {
+    return res.status(403).json({ error: 'attempts_used', message: 'You have used all your tries for the final exam. Ask your teacher to unlock it.' });
+  }
+  const unlocked = !!(f && f.unlocked_at && f.completed_at && new Date(f.unlocked_at) > new Date(f.completed_at));
+  if (f && !unlocked && REVIEW_RETAKE_HOURS > 0 && f.completed_at) {
+    const opens = new Date(new Date(f.completed_at).getTime() + REVIEW_RETAKE_HOURS * 3600 * 1000);
+    if (opens.getTime() > Date.now()) return res.status(403).json({ error: 'retake_wait', retake_at: opens.toISOString(), message: 'Go back over your chapters first.' });
+  }
+  const round = 'F' + ((f && f.attempts) || 0);
+  const questions = await finalQuestionsFor(req.student.id, round);
+  await supabase.from('final_answers').delete().eq('student_id', req.student.id);
+  res.json({
+    pass_percent: FINAL_PASS_PERCENT,
+    questions: questions.map((q) => { const p = quizMix.presentQuestion(req.student.id, q, round); return { id: p.id, question: p.question, options: p.options, chapter_number: q.chapter_number }; }),
+  });
+});
+
+// Records one answer and says nothing about whether it was right: the result comes at the end.
+app.post('/api/final/answer', requireStudent, async (req, res) => {
+  const { quizId, selectedIndex } = req.body;
+  if (!quizId || !Number.isInteger(selectedIndex)) return res.status(400).json({ error: 'quizId and selectedIndex required' });
+  if (answeringTooFast(req.student.id)) return res.status(429).json({ error: 'slow_down', message: 'You are answering very fast. Slow down and read each question.' });
+  const st = await finalState(req.student.id);
+  const blocked = finalBlock(st, req);
+  if (blocked) return res.status(blocked.code).json(blocked.body);
+  const round = 'F' + ((st.fin && st.fin.attempts) || 0);
+  const mine = await finalQuestionsFor(req.student.id, round);
+  if (!mine.some((q) => q.id === quizId)) return res.status(404).json({ error: 'Question not found' });
+  const { data: item } = await supabase.from('quiz_bank').select('correct_index, options').eq('id', quizId).single();
+  const n = ((item && item.options) || []).length;
+  if (!n || selectedIndex < 0 || selectedIndex >= n) return res.status(400).json({ error: 'Invalid answer' });
+  const original = quizMix.toOriginalIndex(req.student.id, quizId, n, selectedIndex, round);
+  const { data: prior } = await supabase.from('final_answers').select('id').eq('student_id', req.student.id).eq('quiz_id', quizId).maybeSingle();
+  if (!prior) await supabase.from('final_answers').insert({ student_id: req.student.id, quiz_id: quizId, is_correct: item.correct_index === original });
+  res.json({ recorded: true });
+});
+
+app.post('/api/final/complete', requireStudent, async (req, res) => {
+  const st = await finalState(req.student.id);
+  const blocked = finalBlock(st, req);
+  if (blocked) return res.status(blocked.code).json(blocked.body);
+  const attemptsSoFar = (st.fin && st.fin.attempts) || 0;
+  const mine = await finalQuestionsFor(req.student.id, 'F' + attemptsSoFar);
+  const { data: answers } = await supabase.from('final_answers').select('is_correct').eq('student_id', req.student.id);
+  if (!mine.length || (answers || []).length < mine.length) return res.status(400).json({ error: 'incomplete', message: 'Answer every question before finishing.' });
+  const score_percent = Math.round((answers.filter((a) => a.is_correct).length / mine.length) * 100);
+  const passed = score_percent >= FINAL_PASS_PERCENT;
+  const { error } = await supabase.from('final_exams').upsert(
+    { student_id: req.student.id, score_percent, passed, attempts: attemptsSoFar + 1, completed_at: new Date().toISOString() },
+    { onConflict: 'student_id' }
+  );
+  if (error) return res.status(500).json({ error: 'save_failed', message: 'Could not save your result. Tell your teacher.' });
+  const retake_at = !passed && REVIEW_RETAKE_HOURS > 0 ? new Date(Date.now() + REVIEW_RETAKE_HOURS * 3600 * 1000).toISOString() : null;
+  res.json({ passed, score_percent, pass_percent: FINAL_PASS_PERCENT, retake_at });
+});
+
 app.post('/api/sections/:id/attempt', requireStudent, async (req, res) => {
   const { quizId, selectedIndex, responseTimeMs } = req.body;
   const sectionId = req.params.id;
@@ -988,19 +1094,20 @@ app.get('/api/admin/guests', requireAdmin, async (req, res) => {
 // What to look at before approving a reward: test passes, tests that ran out of tries, very quick answerers, and one address used by two accounts.
 app.get('/api/admin/integrity', requireAdmin, async (req, res) => {
   const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();
-  const [students, chapters, reviews, payouts, attempts, logins] = await Promise.all([
+  const [students, chapters, reviews, payouts, attempts, logins, finals] = await Promise.all([
     supabase.from('students').select('id, full_name, cohort'),
     supabase.from('chapters').select('id, number'),
     supabase.from('chapter_reviews').select('student_id, chapter_id, score_percent, passed, attempts, extra_attempts, completed_at').gte('completed_at', ago(60)),
     supabase.from('payouts').select('student_id, label, status').eq('kind', 'chapter'),
     supabase.from('attempts').select('student_id, response_time_ms').gte('attempted_at', ago(14)).limit(5000),
     supabase.from('attendance_log').select('student_id, log_date, last_ip').gte('log_date', ago(14).slice(0, 10)),
+    supabase.from('final_exams').select('student_id, score_percent, passed, attempts, extra_attempts, completed_at'),
   ]);
-  const failed = [students, chapters, reviews, payouts, attempts, logins].find((r) => r.error);
+  const failed = [students, chapters, reviews, payouts, attempts, logins, finals].find((r) => r.error);
   if (failed) return res.status(500).json({ error: failed.error.message });
   res.json(buildIntegrityReport({
     students: students.data || [], chapters: chapters.data || [], reviews: reviews.data || [], payouts: payouts.data || [],
-    attempts: attempts.data || [], logins: logins.data || [], centreIps: CENTRE_IPS, maxAttempts: REVIEW_MAX_ATTEMPTS,
+    attempts: attempts.data || [], logins: logins.data || [], finals: finals.data || [], centreIps: CENTRE_IPS, maxAttempts: REVIEW_MAX_ATTEMPTS,
   }));
 });
 
@@ -1011,6 +1118,17 @@ app.post('/api/admin/reviews/:studentId/:chapterId/unlock', requireAdmin, async 
   if (!r) return res.status(404).json({ error: 'No test result found' });
   const extra = Math.max(r.extra_attempts || 0, (r.attempts || 0) + 1 - REVIEW_MAX_ATTEMPTS);
   const { error } = await supabase.from('chapter_reviews').update({ extra_attempts: extra, unlocked_at: new Date().toISOString() }).eq('student_id', studentId).eq('chapter_id', chapterId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// A teacher gives one more try at the final exam (and skips the waiting time).
+app.post('/api/admin/final/:studentId/unlock', requireAdmin, async (req, res) => {
+  const { studentId } = req.params;
+  const { data: f } = await supabase.from('final_exams').select('attempts, extra_attempts').eq('student_id', studentId).maybeSingle();
+  if (!f) return res.status(404).json({ error: 'No final exam result found' });
+  const extra = Math.max(f.extra_attempts || 0, (f.attempts || 0) + 1 - REVIEW_MAX_ATTEMPTS);
+  const { error } = await supabase.from('final_exams').update({ extra_attempts: extra, unlocked_at: new Date().toISOString() }).eq('student_id', studentId);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });

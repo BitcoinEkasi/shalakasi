@@ -737,6 +737,9 @@ async function loadIntegrity() {
   document.getElementById('integrity-locked').innerHTML = d.locked.length
     ? table(['Name', 'Chapter', 'Last score', 'Tries', ''], d.locked.map((t) => `<tr><td>${escapeHtml(t.name)}</td><td>${t.chapter}</td><td>${t.score_percent}%</td><td>${t.attempts}</td><td>${unlockBtn(t)}</td></tr>`))
     : none('None.');
+  document.getElementById('integrity-finals').innerHTML = d.finals.length
+    ? table(['Name', 'Score', 'Result', 'Tries', 'When', ''], d.finals.map((f) => `<tr><td>${escapeHtml(f.name)}${f.guest ? ' <span class="pill">guest</span>' : ''}</td><td>${f.score_percent}%</td><td>${f.passed ? 'passed' : 'not passed'}</td><td>${f.attempts}</td><td>${when(f.completed_at)}</td><td>${f.locked ? `<button class="mini-btn" data-unlock-final="${f.student_id}">Unlock one more try</button>` : ''}</td></tr>`))
+    : none('Nobody has written the final exam yet.');
   document.getElementById('integrity-tests').innerHTML = d.tests.length
     ? table(['Name', 'Chapter', 'Score', 'Result', 'Tries', 'When', 'Reward', 'Flags'], d.tests.map((t) => `<tr><td>${escapeHtml(t.name)}${t.guest ? ' <span class="pill">guest</span>' : ''}</td><td>${t.chapter}</td><td>${t.score_percent}%</td><td>${t.passed ? 'passed' : 'not passed'}</td><td>${t.attempts}</td><td>${when(t.completed_at)}</td><td>${t.reward ? escapeHtml(t.reward) : ''}</td><td>${t.flags.map((f) => `<span class="pill">${escapeHtml(f)}</span>`).join(' ')}</td></tr>`))
     : none('No chapter tests yet.');
@@ -746,6 +749,11 @@ async function loadIntegrity() {
   document.getElementById('integrity-shared').innerHTML = d.shared.length
     ? table(['Address', 'Accounts', 'Days'], d.shared.map((s) => `<tr><td>${escapeHtml(s.ip)}</td><td>${s.students.map(escapeHtml).join(', ')}</td><td>${s.days.join(', ')}</td></tr>`))
     : none('None. (Addresses are only recorded from now on.)');
+  document.querySelectorAll('[data-unlock-final]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    const r = await fetch(`/api/admin/final/${b.dataset.unlockFinal}/unlock`, { method: 'POST', headers: adminHeaders() });
+    if (r.ok) loadIntegrity(); else { b.disabled = false; alert('Could not unlock.'); }
+  }));
   document.querySelectorAll('[data-unlock]').forEach((b) => b.addEventListener('click', async () => {
     const [sid, cid] = b.dataset.unlock.split('|');
     b.disabled = true;

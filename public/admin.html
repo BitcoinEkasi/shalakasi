@@ -34,6 +34,7 @@
     <div class="admin-tabs">
       <button class="admin-tab active" data-page="students">Students</button>
       <button class="admin-tab" data-page="guests">Guests</button>
+      <button class="admin-tab" data-page="integrity">Integrity</button>
       <button class="admin-tab" data-page="books">Books</button>
       <button class="admin-tab" data-page="payouts">Payouts</button>
       <button class="admin-tab" data-page="register">Register</button>
@@ -172,6 +173,22 @@
           <tr><td colspan="3" class="empty-note">Loading…</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- INTEGRITY PAGE -->
+  <div class="admin-page" id="page-integrity">
+    <div class="admin-body">
+      <h1 class="page-title">Integrity</h1>
+      <p class="page-sub">Look at this before approving rewards. A flag is a reason to look, not proof of cheating.</p>
+      <h3>Tests that ran out of tries</h3>
+      <div id="integrity-locked"></div>
+      <h3>Chapter tests, last 60 days</h3>
+      <div id="integrity-tests"></div>
+      <h3>Answering very quickly (last 14 days)</h3>
+      <div id="integrity-fast"></div>
+      <h3>Same address used by more than one account (last 14 days, centre excluded)</h3>
+      <div id="integrity-shared"></div>
     </div>
   </div>
 

@@ -50,6 +50,7 @@ document.querySelectorAll('.admin-tab').forEach((tab) => {
     tab.classList.add('active');
     document.getElementById('page-' + tab.dataset.page).classList.add('active');
     if (tab.dataset.page === 'guests') loadGuests();
+    if (tab.dataset.page === 'integrity') loadIntegrity();
     if (tab.dataset.page === 'books') loadBooks();
     if (tab.dataset.page === 'payouts') loadPayouts();
     if (tab.dataset.page === 'register') loadRegister();
@@ -721,4 +722,34 @@ function guestChapterTable(g) {
     return `<tr><td>Chapter ${c.number}: ${escapeHtml(c.title)}</td><td>${c.sections_done} of ${c.sections_total}</td><td>${test}</td></tr>`;
   }).join('');
   return `<table class="student-table" style="margin:6px 0;"><thead><tr><th>Chapter</th><th>Sections done</th><th>Chapter test</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+
+// ---------- INTEGRITY ----------
+async function loadIntegrity() {
+  const none = (t) => `<p class="empty-note">${t}</p>`;
+  const table = (head, rows) => `<table class="student-table"><thead><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  const res = await fetch('/api/admin/integrity', { headers: adminHeaders() });
+  if (!res.ok) { document.getElementById('integrity-tests').innerHTML = none('Could not load the report.'); return; }
+  const d = await res.json();
+  const when = (t) => (t ? new Date(t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+  const unlockBtn = (t) => `<button class="mini-btn" data-unlock="${t.student_id}|${t.chapter_id}">Unlock one more try</button>`;
+  document.getElementById('integrity-locked').innerHTML = d.locked.length
+    ? table(['Name', 'Chapter', 'Last score', 'Tries', ''], d.locked.map((t) => `<tr><td>${escapeHtml(t.name)}</td><td>${t.chapter}</td><td>${t.score_percent}%</td><td>${t.attempts}</td><td>${unlockBtn(t)}</td></tr>`))
+    : none('None.');
+  document.getElementById('integrity-tests').innerHTML = d.tests.length
+    ? table(['Name', 'Chapter', 'Score', 'Result', 'Tries', 'When', 'Reward', 'Flags'], d.tests.map((t) => `<tr><td>${escapeHtml(t.name)}${t.guest ? ' <span class="pill">guest</span>' : ''}</td><td>${t.chapter}</td><td>${t.score_percent}%</td><td>${t.passed ? 'passed' : 'not passed'}</td><td>${t.attempts}</td><td>${when(t.completed_at)}</td><td>${t.reward ? escapeHtml(t.reward) : ''}</td><td>${t.flags.map((f) => `<span class="pill">${escapeHtml(f)}</span>`).join(' ')}</td></tr>`))
+    : none('No chapter tests yet.');
+  document.getElementById('integrity-fast').innerHTML = d.fast.length
+    ? table(['Name', 'Answers', 'Typical time to answer'], d.fast.map((f) => `<tr><td>${escapeHtml(f.name)}</td><td>${f.answers}</td><td>${f.median_seconds} seconds</td></tr>`))
+    : none('Nobody flagged.');
+  document.getElementById('integrity-shared').innerHTML = d.shared.length
+    ? table(['Address', 'Accounts', 'Days'], d.shared.map((s) => `<tr><td>${escapeHtml(s.ip)}</td><td>${s.students.map(escapeHtml).join(', ')}</td><td>${s.days.join(', ')}</td></tr>`))
+    : none('None. (Addresses are only recorded from now on.)');
+  document.querySelectorAll('[data-unlock]').forEach((b) => b.addEventListener('click', async () => {
+    const [sid, cid] = b.dataset.unlock.split('|');
+    b.disabled = true;
+    const r = await fetch(`/api/admin/reviews/${sid}/${cid}/unlock`, { method: 'POST', headers: adminHeaders() });
+    if (r.ok) loadIntegrity(); else { b.disabled = false; alert('Could not unlock.'); }
+  }));
 }

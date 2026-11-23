@@ -14,6 +14,7 @@ const supabase = require('./services/supabase');
 const quizMix = require('./services/quizMix');
 const studyPlan = require('./services/studyPlan');
 const { buildGuestReport } = require('./services/guestReport');
+const { buildIntegrityReport } = require('./services/integrityReport');
 const trackerRewards = require('./services/trackerRewards');
 const bookFiles = require('./services/bookStorage');
 const { decideNextStep } = require('./services/aiEngine');
@@ -44,6 +45,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'shalakasi-dev-secret-change-me';
 const MASTERY_THRESHOLD = 0.75;
 const POSTGRAD_MASTERY_THRESHOLD = 0.75;
 const REVIEW_PASS_PERCENT = parseInt(process.env.REVIEW_PASS_PERCENT, 10) || 60;
+const REVIEW_MAX_ATTEMPTS = parseInt(process.env.REVIEW_MAX_ATTEMPTS, 10) || 3; // tries at a chapter test before a teacher must unlock it
+const CENTRE_IPS = (process.env.CENTRE_IPS || '165.165.246.150').split(',').map((x) => x.trim()).filter(Boolean);
 const GUEST_PASS_PERCENT = parseInt(process.env.GUEST_PASS_PERCENT, 10) || 80;
 // Guests (cohort starting with "guest") must score higher to pass a chapter test.
 async function passPercentFor(studentId) {
@@ -218,6 +221,9 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       log_date: logDate,
     });
   }
+
+  // Remember where today's login came from (best effort: a failure here never blocks the login).
+  supabase.from('attendance_log').update({ last_ip: String(req.ip || '').replace(/^::ffff:/, '') }).eq('student_id', student.id).eq('log_date', logDate).then(() => {}, () => {});
 
   // Tell the attendance tracker this student logged in (it decides if it was in class). Never blocks login.
   notifyTracker(student.full_name, req.ip, (Date.now() < studyStartMs() ? null : studyPlan.scheduledToday(student.study_group, new Date(), STUDY_WEEK1_START)));
@@ -526,8 +532,12 @@ app.get('/api/chapters/:id/review', requireStudent, async (req, res) => {
 
   const passPercent = await passPercentFor(req.student.id);
   // After a fail the student waits before trying again, so the test cannot be learned by answering it over and over.
-  const { data: lastTry } = await supabase.from('chapter_reviews').select('passed, completed_at').eq('student_id', req.student.id).eq('chapter_id', chapter.id).maybeSingle();
-  if (lastTry && !lastTry.passed && REVIEW_RETAKE_HOURS > 0 && lastTry.completed_at) {
+  const { data: lastTry } = await supabase.from('chapter_reviews').select('passed, completed_at, attempts, extra_attempts, unlocked_at').eq('student_id', req.student.id).eq('chapter_id', chapter.id).maybeSingle();
+  if (lastTry && !lastTry.passed && (lastTry.attempts || 0) >= REVIEW_MAX_ATTEMPTS + (lastTry.extra_attempts || 0)) {
+    return res.status(403).json({ error: 'attempts_used', pass_percent: passPercent, message: 'You have used all your tries for this test. Ask your teacher to unlock it.' });
+  }
+  const unlocked = !!(lastTry && lastTry.unlocked_at && lastTry.completed_at && new Date(lastTry.unlocked_at) > new Date(lastTry.completed_at));
+  if (lastTry && !lastTry.passed && !unlocked && REVIEW_RETAKE_HOURS > 0 && lastTry.completed_at) {
     const opens = new Date(new Date(lastTry.completed_at).getTime() + REVIEW_RETAKE_HOURS * 3600 * 1000);
     if (opens.getTime() > Date.now()) {
       return res.status(403).json({ error: 'retake_wait', retake_at: opens.toISOString(), pass_percent: passPercent, message: 'Have another look at the sections you were less sure of. You can try the test again later.' });
@@ -973,6 +983,36 @@ app.get('/api/admin/guests', requireAdmin, async (req, res) => {
     supabase.from('attendance_log').select('student_id, last_login_at').in('student_id', ids),
   ]);
   res.json(buildGuestReport({ students, chapters: chapters || [], sections: sections || [], progress: progress || [], reviews: reviews || [], logins: logins || [] }));
+});
+
+// What to look at before approving a reward: test passes, tests that ran out of tries, very quick answerers, and one address used by two accounts.
+app.get('/api/admin/integrity', requireAdmin, async (req, res) => {
+  const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();
+  const [students, chapters, reviews, payouts, attempts, logins] = await Promise.all([
+    supabase.from('students').select('id, full_name, cohort'),
+    supabase.from('chapters').select('id, number'),
+    supabase.from('chapter_reviews').select('student_id, chapter_id, score_percent, passed, attempts, extra_attempts, completed_at').gte('completed_at', ago(60)),
+    supabase.from('payouts').select('student_id, label, status').eq('kind', 'chapter'),
+    supabase.from('attempts').select('student_id, response_time_ms').gte('attempted_at', ago(14)).limit(5000),
+    supabase.from('attendance_log').select('student_id, log_date, last_ip').gte('log_date', ago(14).slice(0, 10)),
+  ]);
+  const failed = [students, chapters, reviews, payouts, attempts, logins].find((r) => r.error);
+  if (failed) return res.status(500).json({ error: failed.error.message });
+  res.json(buildIntegrityReport({
+    students: students.data || [], chapters: chapters.data || [], reviews: reviews.data || [], payouts: payouts.data || [],
+    attempts: attempts.data || [], logins: logins.data || [], centreIps: CENTRE_IPS, maxAttempts: REVIEW_MAX_ATTEMPTS,
+  }));
+});
+
+// A teacher gives one more try at a chapter test (and skips the waiting time).
+app.post('/api/admin/reviews/:studentId/:chapterId/unlock', requireAdmin, async (req, res) => {
+  const { studentId, chapterId } = req.params;
+  const { data: r } = await supabase.from('chapter_reviews').select('attempts, extra_attempts').eq('student_id', studentId).eq('chapter_id', chapterId).maybeSingle();
+  if (!r) return res.status(404).json({ error: 'No test result found' });
+  const extra = Math.max(r.extra_attempts || 0, (r.attempts || 0) + 1 - REVIEW_MAX_ATTEMPTS);
+  const { error } = await supabase.from('chapter_reviews').update({ extra_attempts: extra, unlocked_at: new Date().toISOString() }).eq('student_id', studentId).eq('chapter_id', chapterId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
 });
 
 app.get('/api/admin/students/:id/decisions', requireAdmin, async (req, res) => {

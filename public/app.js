@@ -342,6 +342,17 @@ async function loadSection(sectionId, chapterNumber, chapterTitle) {
 }
 
 // ---------- CHAPTER REVIEW ----------
+// Shown when every try at a chapter test has been used: a teacher has to unlock it.
+function showReviewLocked(chapter, info) {
+  const el = document.getElementById('course-content');
+  el.innerHTML = `
+    <div class="crumb">Chapter ${chapter.number} · ${escapeHtmlDash(chapter.title)} <span>· Chapter Test</span></div>
+    <h1 class="section-title">Ask your teacher</h1>
+    <div class="review-note">${info.message || 'You have used all your tries for this test. Ask your teacher to unlock it.'} In the meantime you can go back over any section in this chapter from the list on the left.</div>
+  `;
+  renderChapterNav(chapter.number, null);
+}
+
 // Shown after a failed chapter test: the next try opens later, so the test is not learned by answering it again and again.
 function showReviewWait(chapter, info) {
   const when = new Date(info.retake_at).toLocaleString('en-ZA', { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' });
@@ -365,6 +376,7 @@ async function loadChapterReview(chapter) {
   if (res.status === 401) return forceLogout();
   const data = await res.json();
   if (res.status === 403 && data.error === 'retake_wait') { showReviewWait(chapter, data); return; }
+  if (res.status === 403 && data.error === 'attempts_used') { showReviewLocked(chapter, data); return; }
 
   reviewQuestions = data.questions || [];
   reviewIndex = 0;

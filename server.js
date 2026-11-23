@@ -1561,4 +1561,4 @@ app.patch('/api/admin/students/:id/lightning-address', requireAdmin, async (req,
 });
 
 const PORT = process.env.PORT || 3300;
-app.listen(PORT, () => console.log(`Study & Stack running on http://localhost:${PORT}`));
+app.listen(PORT, process.env.HOST || '127.0.0.1', () => console.log(`Study & Stack running on http://localhost:${PORT}`));
